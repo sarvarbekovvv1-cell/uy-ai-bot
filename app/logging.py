@@ -6,7 +6,7 @@ import sys
 
 from app.config import get_settings
 
-# Regex patterns to sanitize sensitive credentials
+# Regex patterns to sanitize sensitive credentials and personal data
 SENSITIVE_PATTERNS = [
     (re.compile(r"bot\d+:[A-Za-z0-9_-]+", re.IGNORECASE), "bot[REDACTED_TOKEN]"),
     (re.compile(r"(password=)['\"][^'\"]*['\"]", re.IGNORECASE), r"\1'[REDACTED]'"),
@@ -18,6 +18,14 @@ SENSITIVE_PATTERNS = [
         re.compile(r"(bearer\s+)[A-Za-z0-9._-]+", re.IGNORECASE),
         r"\1[REDACTED]",
     ),  # Auth bearer tokens
+    (
+        re.compile(r"(\+?998\s?\d{2}\s?\d{3}\s?\d{2}\s?\d{2})"),
+        "[REDACTED_PHONE]",
+    ),  # Redact Uzbekistan phone numbers
+    (
+        re.compile(r"(phone(?:_number)?\s*[:=]\s*)['\"]?(\+?\d{9,15})['\"]?", re.IGNORECASE),
+        r"\1'[REDACTED_PHONE]'",
+    ),  # Redact labeled phone arguments
 ]
 
 

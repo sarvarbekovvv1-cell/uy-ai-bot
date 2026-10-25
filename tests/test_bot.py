@@ -4,10 +4,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Chat, Message, User
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.dispatcher import create_dispatcher
-from app.bot.handlers.start import START_MESSAGE, handle_start_command, start_router
+from app.bot.handlers.start import handle_start_command, start_router
+from app.bot.locales import get_text
 
 
 def test_dispatcher_creation_without_polling() -> None:
@@ -29,13 +32,22 @@ def test_start_router_has_registered_handlers() -> None:
 
 @pytest.mark.asyncio
 async def test_start_command_handler_response() -> None:
-    """Verify that handle_start_command sends the foundation message without network calls."""
+    """Verify that handle_start_command initiates language selection for new users."""
+    from unittest.mock import patch
+
+    from app.services.user_service import UserService
+
     mock_message = AsyncMock(spec=Message)
     mock_message.answer = AsyncMock()
     mock_message.text = "/start"
     mock_message.chat = Chat(id=12345678, type="private")
     mock_message.from_user = User(id=12345678, is_bot=False, first_name="TestUser")
 
-    await handle_start_command(mock_message)
+    mock_state = AsyncMock(spec=FSMContext)
+    mock_session = AsyncMock(spec=AsyncSession)
 
-    mock_message.answer.assert_awaited_once_with(START_MESSAGE)
+    with patch.object(UserService, "get_by_telegram_id", new=AsyncMock(return_value=None)):
+        await handle_start_command(mock_message, mock_state, mock_session)
+
+    mock_message.answer.assert_awaited_once()
+    assert mock_message.answer.call_args[0][0] == get_text("choose_language", "uz")

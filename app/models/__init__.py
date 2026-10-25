@@ -1,4 +1,12 @@
-"""SQLAlchemy models module.
+"""SQLAlchemy database models for UyAI."""
 
-Domain models will be added in subsequent phases.
-"""
+from app.models.role import DEFAULT_CUSTOMER_ROLE, SYSTEM_ROLES, Role, UserRole
+from app.models.user import User
+
+__all__ = [
+    "User",
+    "Role",
+    "UserRole",
+    "SYSTEM_ROLES",
+    "DEFAULT_CUSTOMER_ROLE",
+]

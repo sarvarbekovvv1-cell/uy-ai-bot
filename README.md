@@ -8,11 +8,11 @@ UyAI is a modern digital real-estate management platform designed to streamline 
 
 ## Current Development Phase
 
-> **Current Phase: Phase 1 — Foundation**
+> **Current Phase: Phase 2 — Telegram Bot Core + User Registration + RBAC Foundation**
 >
-> **Notice:** Business functionality (property search, AI valuations, amoCRM synchronization, Mini App, maps, HR testing, analytics, Kaizen continuous improvement, and payments) is intentionally **NOT** implemented in this phase.
+> **Notice:** Core user onboarding, language selection (Uzbek/Russian), privacy consent, phone verification via Telegram Contact, user role assignment (`buyer`), settings, and main navigation menu are implemented.
 >
-> Phase 1 strictly delivers the architectural, technical, database, and operational foundation.
+> Business workflows (property CRUD, AI valuation, amoCRM sync, Mini App, maps, HR testing, analytics, Kaizen continuous improvement, and payments) are intentionally **NOT** implemented in this phase.
 
 ---
 

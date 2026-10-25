@@ -1,4 +1,6 @@
-"""Data access repositories module.
+"""Repositories package initialization."""
 
-Domain repositories will be added in subsequent phases.
-"""
+from app.repositories.role_repository import RoleRepository
+from app.repositories.user_repository import UserRepository
+
+__all__ = ["UserRepository", "RoleRepository"]

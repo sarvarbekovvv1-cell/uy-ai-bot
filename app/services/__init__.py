@@ -1,4 +1,5 @@
-"""Business logic services module.
+"""Services package initialization."""
 
-Domain services will be added in subsequent phases.
-"""
+from app.services.user_service import UserService
+
+__all__ = ["UserService"]
