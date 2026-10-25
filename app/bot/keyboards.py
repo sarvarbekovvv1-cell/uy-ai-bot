@@ -1076,3 +1076,16 @@ def get_lead_history_back_keyboard(
             ]
         ]
     )
+
+
+def get_ai_broker_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    """Build conversational reply keyboard while chatting with AI Broker."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text=get_text("btn_ai_exit", lang)),
+            ]
+        ],
+        resize_keyboard=True,
+        persistent=True,
+    )

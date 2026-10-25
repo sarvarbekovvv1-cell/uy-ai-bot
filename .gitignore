@@ -30,10 +30,18 @@ env/
 
 # Environment Variables & Secrets
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 *.pem
 *.key
+*.crt
+*.cer
+*.cert
+*.log
+*.sql
+*.dump
+secrets/
+credentials/
 
 # IDE & OS
 .idea/

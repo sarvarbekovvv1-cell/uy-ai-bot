@@ -85,3 +85,9 @@ class BrokerCabinetStates(StatesGroup):
     waiting_followup_date = State()
     waiting_followup_note = State()
     waiting_note_text = State()
+
+
+class AIBrokerStates(StatesGroup):
+    """Workflow state for conversational AI Broker interaction."""
+
+    chatting = State()

@@ -1,5 +1,6 @@
 """Telegram bot handlers aggregation."""
 
+from app.bot.handlers.ai_broker import ai_broker_router
 from app.bot.handlers.appointments import appointments_router
 from app.bot.handlers.broker_cabinet import broker_cabinet_router
 from app.bot.handlers.broker_requests import broker_requests_router
@@ -27,5 +28,6 @@ __all__ = [
     "my_properties_router",
     "review_router",
     "settings_router",
+    "ai_broker_router",
     "menu_router",
 ]

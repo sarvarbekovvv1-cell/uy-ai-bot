@@ -180,3 +180,40 @@ Run Ruff checks:
 make lint
 # or: .venv/bin/ruff check .
 ```
+
+---
+
+## AI Broker Integration (Phase 7)
+
+UyAI features a natural-language AI Broker powered by Google's official `google-genai` SDK and grounded on UyAI's database.
+
+### Environment Configuration
+
+To enable the AI Broker locally:
+
+```env
+GEMINI_API_KEY=your_actual_google_gemini_api_key_here
+GEMINI_MODEL=gemini-3.6-flash
+AI_BROKER_ENABLED=true
+AI_REQUEST_TIMEOUT_SECONDS=15.0
+AI_MAX_HISTORY_MESSAGES=6
+AI_MAX_SEARCH_RESULTS=5
+```
+
+If `AI_BROKER_ENABLED=false`, the bot provides a localized notice that AI Broker is temporarily unavailable, and all core functions continue operating normally.
+
+### Architectural & Security Principles
+
+1. **Database as the Sole Source of Truth**:
+   The LLM (Gemini) is only used for intent extraction and grounded phrasing. It **never** invents properties, prices, or contact information. Properties are fetched directly from the database, and only `approved` listings are returned.
+2. **Strict PII Protection**:
+   Context built for the LLM contains only public property attributes (title, price, rooms, area, district, etc.). Owner user IDs, phone numbers, customer details, Telegram IDs, and internal broker notes are strictly excluded.
+3. **Prompt Injection & Hallucination Defense**:
+   User input is treated as untrusted. Prompt injection attacks (e.g. attempting to dump users or override policies) are safely classified without database dumps.
+4. **Deterministic Testing Double**:
+   All automated unit, integration, and E2E tests run against `FakeLLMProvider`. No real Gemini API calls or API keys are required during test suite execution.
+
+### Known Limitations
+
+- Real-time conversational context is bounded to the recent turns in active Telegram FSM state (`AIBrokerStates.chatting`).
+- Complex legal or tax inquiries produce non-authoritative general guidance with explicit disclaimers and recommendations to consult a licensed human broker.

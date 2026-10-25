@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
+    # Gemini AI Broker
+    gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
+    gemini_model: str = Field(default="gemini-3.6-flash", alias="GEMINI_MODEL")
+    ai_broker_enabled: bool = Field(default=False, alias="AI_BROKER_ENABLED")
+    ai_request_timeout_seconds: float = Field(default=30.0, alias="AI_REQUEST_TIMEOUT_SECONDS")
+    ai_max_history_messages: int = Field(default=6, alias="AI_MAX_HISTORY_MESSAGES")
+    ai_max_search_results: int = Field(default=5, alias="AI_MAX_SEARCH_RESULTS")
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:

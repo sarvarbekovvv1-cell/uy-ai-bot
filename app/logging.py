@@ -19,6 +19,17 @@ SENSITIVE_PATTERNS = [
         r"\1[REDACTED]",
     ),  # Auth bearer tokens
     (
+        re.compile(r"(?:AIzaSy|AQ\.)[A-Za-z0-9_-]{30,}", re.IGNORECASE),
+        "[REDACTED_GEMINI_KEY]",
+    ),  # Redact Gemini and Google API keys
+    (
+        re.compile(
+            r"(?:api[-_]?key|gemini[-_]?key)\s*[:=]\s*['\"]?([A-Za-z0-9._-]+)['\"]?",
+            re.IGNORECASE,
+        ),
+        "api_key='[REDACTED_KEY]'",
+    ),  # Redact explicit API key parameters
+    (
         re.compile(r"(\+?998\s?\d{2}\s?\d{3}\s?\d{2}\s?\d{2})"),
         "[REDACTED_PHONE]",
     ),  # Redact Uzbekistan phone numbers

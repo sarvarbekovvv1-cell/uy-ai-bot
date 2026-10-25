@@ -1,5 +1,6 @@
 """Services package initialization."""
 
+from app.services.ai_broker_service import AIBrokerResult, AIBrokerService
 from app.services.favorite_service import FavoriteService
 from app.services.lead_service import LeadService
 from app.services.property_search_service import PropertySearchService
@@ -14,4 +15,6 @@ __all__ = [
     "FavoriteService",
     "ViewingRequestService",
     "LeadService",
+    "AIBrokerService",
+    "AIBrokerResult",
 ]

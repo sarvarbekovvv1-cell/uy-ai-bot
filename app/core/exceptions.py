@@ -91,3 +91,23 @@ class LeadValidationError(UyAIError):
 
 class FollowUpNotFoundError(EntityNotFoundError):
     """Raised when a requested follow-up task cannot be found."""
+
+
+class AIBrokerError(UyAIError):
+    """Base exception for AI Broker operations."""
+
+
+class AIBrokerProviderError(AIBrokerError):
+    """Raised when the LLM provider fails to generate a response."""
+
+
+class AIBrokerTimeoutError(AIBrokerError):
+    """Raised when the LLM request times out."""
+
+
+class AIBrokerValidationError(AIBrokerError):
+    """Raised when structured LLM output fails schema validation."""
+
+
+class AIBrokerRateLimitError(AIBrokerError):
+    """Raised when user exceeds the AI Broker request cooldown."""

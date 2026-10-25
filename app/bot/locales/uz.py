@@ -293,4 +293,39 @@ MESSAGES: dict[str, str] = {
     "task_meeting": "🤝 Uchrashuv",
     "task_other": "📋 Boshqa",
     "lead_stats_title": "📊 <b>Broker faoliyati statistikasi:</b>",
+    # AI Broker
+    "btn_ai_exit": "❌ Suhbatni yakunlash",
+    "ai_welcome": (
+        "🤖 <b>AI Broker ishga tushdi!</b>\n\n"
+        "Menga qanday ko‘chmas mulk qidirayotganingizni oddiy so‘zlar bilan yozing.\n\n"
+        "<i>Masalan:</i>\n"
+        "• «Chilonzordan 2 xonali 100 ming dollargacha kvartira kerak»\n"
+        "• «Yunusobodda 3 xonali ijaraga uy bormi?»\n"
+        "• «#1 uy nechanchi qavatda?»\n"
+        "• «#1 uyni ko‘rishga yozilmoqchiman»\n\n"
+        "Suhbatni yakunlash uchun quyidagi tugmani bosing."
+    ),
+    "ai_exit_confirmation": "🤖 AI broker bilan suhbat yakunlandi. Siz asosiy menyudasiz.",
+    "ai_disabled": (
+        "🤖 AI Broker xizmati hozircha vaqtincha faol emas. Tez orada ishga tushiriladi!"
+    ),
+    "ai_fallback_error": (
+        "🤖 AI Broker hozircha javob bera olmadi. "
+        "Qidiruv menyusidan foydalanishingiz yoki broker bilan bog‘lanishingiz mumkin."
+    ),
+    "ai_rate_limited": "⏳ Iltimos, xabarlar oralig‘ida biroz kuting.",
+    "ai_search_found": "🔍 Talabingizga mos <b>{count}</b> ta e'lon topildi:",
+    "ai_search_not_found": (
+        "🔍 Talabingizga aynan mos e'lon topilmadi.\n\n"
+        "Qidiruv shartlarini (narx oralig‘i, tuman, xonalar soni) o‘zgartirib ko‘rishingiz mumkin."
+    ),
+    "ai_property_not_found": "Bunday raqamli yoki faol ko‘chmas mulk topilmadi.",
+    "ai_clarification_needed": "Iltimos, talabingizni aniqlashtiring: {question}",
+    "ai_human_broker_suggest": (
+        "Ushbu masala bo‘yicha professional brokerimiz bilan bog‘lanishingizni tavsiya qilamiz."
+    ),
+    "ai_general_disclaimer": (
+        "\n\n⚠️ <i>Eslatma: AI maslahati rasmiy yuridik yoki moliyaviy xulosa hisoblanmaydi. "
+        "Muhim bitimlarda mutaxassis bilan maslahatlashing.</i>"
+    ),
 }
