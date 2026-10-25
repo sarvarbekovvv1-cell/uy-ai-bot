@@ -12,7 +12,7 @@ from app.bot.states import AIBrokerStates
 
 
 class MenuEscapeMiddleware(BaseMiddleware):
-    """Automatically clears AI Broker conversation state when a menu button is clicked."""
+    """Automatically clears active conversation state when a main menu button is clicked."""
 
     async def __call__(
         self,
@@ -24,7 +24,10 @@ class MenuEscapeMiddleware(BaseMiddleware):
             state: FSMContext | None = data.get("state")
             if state:
                 cur = await state.get_state()
-                if cur == AIBrokerStates.chatting.state:
+                if cur and (
+                    cur == AIBrokerStates.chatting.state
+                    or cur.startswith("PropertyValuationStates:")
+                ):
                     await state.clear()
 
         return await handler(event, data)

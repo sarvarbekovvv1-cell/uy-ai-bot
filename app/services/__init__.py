@@ -6,6 +6,11 @@ from app.services.lead_service import LeadService
 from app.services.property_search_service import PropertySearchService
 from app.services.property_service import PropertyService
 from app.services.user_service import UserService
+from app.services.valuation import (
+    ComparablePropertyService,
+    ValuationEngine,
+    ValuationService,
+)
 from app.services.viewing_request_service import ViewingRequestService
 
 __all__ = [
@@ -17,4 +22,7 @@ __all__ = [
     "LeadService",
     "AIBrokerService",
     "AIBrokerResult",
+    "ValuationService",
+    "ComparablePropertyService",
+    "ValuationEngine",
 ]

@@ -91,3 +91,18 @@ class AIBrokerStates(StatesGroup):
     """Workflow state for conversational AI Broker interaction."""
 
     chatting = State()
+
+
+class PropertyValuationStates(StatesGroup):
+    """Workflow states for AI property market valuation."""
+
+    waiting_listing_type = State()
+    waiting_property_type = State()
+    waiting_region = State()
+    waiting_district = State()
+    waiting_rooms = State()
+    waiting_area = State()
+    waiting_condition = State()
+    waiting_floor = State()
+    waiting_currency = State()
+    viewing_result = State()

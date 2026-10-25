@@ -12,6 +12,7 @@ from app.ai.interfaces import LLMProvider
 from app.ai.prompts import (
     GROUNDED_PROPERTY_RESPONSE_SYSTEM_PROMPT,
     INTENT_EXTRACTION_SYSTEM_PROMPT,
+    VALUATION_EXPLANATION_SYSTEM_PROMPT,
 )
 from app.ai.schemas import AIBrokerIntent
 from app.config import Settings, get_settings
@@ -21,6 +22,7 @@ from app.core.exceptions import (
     AIBrokerValidationError,
 )
 from app.logging import get_logger
+from app.schemas.valuation import ValuationExplanation, ValuationSafeContext
 
 logger = get_logger(__name__)
 
@@ -192,3 +194,103 @@ class GeminiLLMProvider(LLMProvider):
             raise AIBrokerProviderError(
                 f"Failed to generate grounded response: {type(e).__name__}"
             ) from e
+
+    async def explain_valuation(
+        self,
+        context: ValuationSafeContext,
+        language: str = "uz",
+    ) -> ValuationExplanation:
+        """Generate safe, structured narrative explanation for deterministic valuation result."""
+        start_time = time.monotonic()
+        system_instruction = VALUATION_EXPLANATION_SYSTEM_PROMPT.format(language=language)
+
+        full_content = (
+            f"DETERMINISTIC_VALUATION_CONTEXT:\n"
+            f"Listing type: {context.listing_type}\n"
+            f"Property type: {context.property_type}\n"
+            f"Location: {context.region}, {context.district}\n"
+            f"Rooms: {context.rooms}, Area: {context.total_area} m2\n"
+            f"Condition: {context.condition or 'not specified'}\n"
+            f"Authoritative Price Range: {context.estimated_price_range_str}\n"
+            f"Authoritative Central Price: {context.central_price_str}\n"
+            f"Median Price/m2: {context.median_price_per_m2_str or 'N/A'}\n"
+            f"Confidence: {context.confidence}\n"
+            f"Comparable Count: {context.comparable_count}\n"
+            f"Comparison Tier: {context.comparison_tier}\n"
+            f"Key Factors: {', '.join(context.factors)}\n"
+            f"Reliability Warnings: {', '.join(context.warnings)}\n\n"
+            f"INSTRUCTION: Explain this already-calculated valuation in {language}. "
+            "Do NOT alter numbers or ranges. Conform strictly to the JSON schema."
+        )
+
+        config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.2,
+            response_mime_type="application/json",
+            response_schema=ValuationExplanation,
+            max_output_tokens=1024,
+        )
+
+        attempts = 3
+        last_error: Exception | None = None
+
+        for attempt in range(attempts):
+            try:
+                response = await asyncio.wait_for(
+                    self.client.aio.models.generate_content(
+                        model=self.model_name,
+                        contents=full_content,
+                        config=config,
+                    ),
+                    timeout=self.timeout,
+                )
+
+                latency = time.monotonic() - start_time
+                logger.info(
+                    "Gemini explain_valuation succeeded (model=%s, latency=%.3fs, attempt=%d)",
+                    self.model_name,
+                    latency,
+                    attempt + 1,
+                )
+
+                raw_text = response.text or "{}"
+                cleaned_json = raw_text.strip()
+                if cleaned_json.startswith("```json"):
+                    cleaned_json = cleaned_json[7:]
+                if cleaned_json.startswith("```"):
+                    cleaned_json = cleaned_json[3:]
+                if cleaned_json.endswith("```"):
+                    cleaned_json = cleaned_json[:-3]
+                cleaned_json = cleaned_json.strip()
+
+                parsed_data = json.loads(cleaned_json)
+                return ValuationExplanation.model_validate(parsed_data)
+
+            except TimeoutError as te:
+                logger.error("Gemini explain_valuation timed out after %.1fs", self.timeout)
+                raise AIBrokerTimeoutError("Gemini request timed out.") from te
+            except (json.JSONDecodeError, ValidationError) as parse_err:
+                logger.error(
+                    "Gemini explain_valuation failed schema/JSON validation: %s",
+                    parse_err,
+                )
+                msg = "Failed to parse valuation JSON response."
+                raise AIBrokerValidationError(msg) from parse_err
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    "Transient error calling Gemini explain_valuation (attempt=%d): %s",
+                    attempt + 1,
+                    type(e).__name__,
+                )
+                if attempt < attempts - 1:
+                    await asyncio.sleep(1.0)
+
+        logger.error(
+            "Gemini explain_valuation failed after %d attempts: %s",
+            attempts,
+            type(last_error).__name__,
+        )
+        raise AIBrokerProviderError(
+            f"Failed to generate valuation explanation: {type(last_error).__name__}"
+        ) from last_error

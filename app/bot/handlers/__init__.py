@@ -14,6 +14,7 @@ from app.bot.handlers.registration import registration_router
 from app.bot.handlers.review import review_router
 from app.bot.handlers.settings import settings_router
 from app.bot.handlers.start import start_router
+from app.bot.handlers.valuation import valuation_router
 
 __all__ = [
     "common_router",
@@ -29,5 +30,6 @@ __all__ = [
     "review_router",
     "settings_router",
     "ai_broker_router",
+    "valuation_router",
     "menu_router",
 ]

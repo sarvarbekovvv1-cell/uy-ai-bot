@@ -576,7 +576,6 @@ def get_viewing_time_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
     )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-
 def get_viewing_confirm_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
     """Build confirmation inline keyboard for submitting viewing request."""
     return InlineKeyboardMarkup(
@@ -692,7 +691,6 @@ def get_broker_request_card_keyboard(
         )
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
-
 
 def get_broker_outcome_keyboard(request_id: int, lang: str = "uz") -> InlineKeyboardMarkup:
     """Build outcome selection keyboard for completing a viewing."""
@@ -810,7 +808,6 @@ def get_broker_leads_list_keyboard(
     )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-
 def get_lead_card_keyboard(
     lead_id: int,
     stage: str,
@@ -875,7 +872,6 @@ def get_lead_card_keyboard(
         ]
     )
     return InlineKeyboardMarkup(inline_keyboard=rows)
-
 
 def get_lead_stage_choice_keyboard(lead_id: int, lang: str = "uz") -> InlineKeyboardMarkup:
     """Build keyboard for choosing next stage."""
@@ -1089,3 +1085,194 @@ def get_ai_broker_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
         resize_keyboard=True,
         persistent=True,
     )
+
+
+# --- Phase 8: Property Valuation Keyboards ---
+
+
+def get_valuation_listing_type_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build inline keyboard for valuation listing type (sale vs rent)."""
+    labels = {
+        "uz": {"sale": "💰 Sotish", "rent": "🔑 Ijara"},
+        "ru": {"sale": "💰 Продажа", "rent": "🔑 Аренда"},
+    }
+    loc = labels.get(lang, labels["uz"])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=loc["sale"], callback_data="val_lt:sale"),
+                InlineKeyboardButton(text=loc["rent"], callback_data="val_lt:rent"),
+            ]
+        ]
+    )
+
+
+def get_valuation_property_type_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build inline keyboard for valuation property type."""
+    labels = {
+        "uz": {
+            "apartment": "🏢 Kvartira",
+            "house": "🏡 Hovli / Uy",
+            "commercial": "🏬 Tijorat",
+            "land": "🌾 Yer uchastkasi",
+        },
+        "ru": {
+            "apartment": "🏢 Квартира",
+            "house": "🏡 Дом / Участок",
+            "commercial": "🏬 Коммерческая",
+            "land": "🌾 Земельный участок",
+        },
+    }
+    loc = labels.get(lang, labels["uz"])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=loc["apartment"], callback_data="val_pt:apartment"),
+                InlineKeyboardButton(text=loc["house"], callback_data="val_pt:house"),
+            ],
+            [
+                InlineKeyboardButton(text=loc["commercial"], callback_data="val_pt:commercial"),
+                InlineKeyboardButton(text=loc["land"], callback_data="val_pt:land"),
+            ],
+        ]
+    )
+
+
+def get_valuation_districts_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:  # noqa: ARG001
+    """Build inline keyboard of popular Tashkent districts."""
+    districts = [
+        ("Chilonzor", "Yunusobod"),
+        ("Mirzo Ulug‘bek", "Mirobod"),
+        ("Yakkasaroy", "Shayxontohur"),
+        ("Olmazor", "Uchtepa"),
+        ("Yashnobod", "Sergeli"),
+    ]
+    rows = []
+    for d1, d2 in districts:
+        rows.append(
+            [
+                InlineKeyboardButton(text=d1, callback_data=f"val_dst:{d1}"),
+                InlineKeyboardButton(text=d2, callback_data=f"val_dst:{d2}"),
+            ]
+        )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def get_valuation_rooms_keyboard() -> InlineKeyboardMarkup:
+    """Build inline keyboard for room counts."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="1", callback_data="val_rooms:1"),
+                InlineKeyboardButton(text="2", callback_data="val_rooms:2"),
+                InlineKeyboardButton(text="3", callback_data="val_rooms:3"),
+                InlineKeyboardButton(text="4", callback_data="val_rooms:4"),
+                InlineKeyboardButton(text="5+", callback_data="val_rooms:5"),
+            ]
+        ]
+    )
+
+
+def get_valuation_condition_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build inline keyboard for condition selection."""
+    labels = {
+        "uz": {
+            "new": "✨ Yangi / Yevroremont",
+            "renovated": "🛠 Ta'mirlangan (yaxshi)",
+            "needs_renovation": "🏚 Ta'mirga muhtoj",
+            "shell": "🧱 Qora suvoq (korobka)",
+        },
+        "ru": {
+            "new": "✨ Новый / Евроремонт",
+            "renovated": "🛠 С хорошим ремонтом",
+            "needs_renovation": "🏚 Требует ремонта",
+            "shell": "🧱 Черновая отделка",
+        },
+    }
+    loc = labels.get(lang, labels["uz"])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=loc["new"], callback_data="val_cond:new"),
+            ],
+            [
+                InlineKeyboardButton(text=loc["renovated"], callback_data="val_cond:renovated"),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=loc["needs_renovation"], callback_data="val_cond:needs_renovation"
+                ),
+            ],
+            [
+                InlineKeyboardButton(text=loc["shell"], callback_data="val_cond:shell"),
+            ],
+        ]
+    )
+
+
+def get_valuation_floor_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build inline keyboard allowing user to skip floor input."""
+    labels = {
+        "uz": "⏭ O‘tkazib yuborish",
+        "ru": "⏭ Пропустить",
+    }
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=labels.get(lang, labels["uz"]),
+                    callback_data="val_floor:skip",
+                )
+            ]
+        ]
+    )
+
+
+def get_valuation_currency_keyboard() -> InlineKeyboardMarkup:
+    """Build inline keyboard for currency selection."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🇺🇸 USD ($)", callback_data="val_curr:USD"),
+                InlineKeyboardButton(text="🇺🇿 UZS (so‘m)", callback_data="val_curr:UZS"),
+            ]
+        ]
+    )
+
+
+def get_valuation_actions_keyboard(
+    has_comps: bool,
+    listing_type: str,
+    lang: str = "uz",
+) -> InlineKeyboardMarkup:
+    """Build action buttons below valuation card."""
+    labels = {
+        "uz": {
+            "comps": "🏘 Taqqoslangan e'lonlar",
+            "search": "🔎 O‘xshash e'lonlarni qidirish",
+            "submit_sale": "💰 Uyimni sotishga qo‘yish",
+            "submit_rent": "🏡 Uyimni ijaraga berish",
+            "broker": "👨‍💼 Broker bilan bog‘lanish",
+            "menu": "⬅️ Asosiy menyu",
+        },
+        "ru": {
+            "comps": "🏘 Сравненные объявления",
+            "search": "🔎 Найти похожие объявления",
+            "submit_sale": "💰 Выставить на продажу",
+            "submit_rent": "🏡 Сдать в аренду",
+            "broker": "👨‍💼 Связаться с брокером",
+            "menu": "⬅️ Главное меню",
+        },
+    }
+    loc = labels.get(lang, labels["uz"])
+    rows = []
+    if has_comps:
+        rows.append([InlineKeyboardButton(text=loc["comps"], callback_data="val_act:comps")])
+
+    rows.append([InlineKeyboardButton(text=loc["search"], callback_data="val_act:search")])
+
+    submit_text = loc["submit_sale"] if listing_type == "sale" else loc["submit_rent"]
+    rows.append([InlineKeyboardButton(text=submit_text, callback_data="val_act:submit")])
+    rows.append([InlineKeyboardButton(text=loc["broker"], callback_data="val_act:broker")])
+    rows.append([InlineKeyboardButton(text=loc["menu"], callback_data="val_act:menu")])
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)

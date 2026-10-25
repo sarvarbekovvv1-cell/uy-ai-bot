@@ -1,8 +1,12 @@
 """Abstract interfaces for LLM providers."""
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from app.ai.schemas import AIBrokerIntent
+
+if TYPE_CHECKING:
+    from app.schemas.valuation import ValuationExplanation, ValuationSafeContext
 
 
 class LLMProvider(ABC):
@@ -26,4 +30,13 @@ class LLMProvider(ABC):
         language: str = "uz",
     ) -> str:
         """Generate a concise, strictly grounded response based on verified application context."""
+        pass
+
+    @abstractmethod
+    async def explain_valuation(
+        self,
+        context: "ValuationSafeContext",
+        language: str = "uz",
+    ) -> "ValuationExplanation":
+        """Generate safe, structured explanation for deterministic valuation result."""
         pass

@@ -11,7 +11,6 @@ menu_router = Router(name="menu")
 
 # Collect all localized button labels for placeholder buttons
 PLACEHOLDER_BUTTON_KEYS = [
-    "btn_valuation",
     "btn_map",
     "btn_contact_broker",
 ]

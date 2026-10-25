@@ -328,4 +328,45 @@ MESSAGES: dict[str, str] = {
         "\n\n⚠️ <i>Eslatma: AI maslahati rasmiy yuridik yoki moliyaviy xulosa hisoblanmaydi. "
         "Muhim bitimlarda mutaxassis bilan maslahatlashing.</i>"
     ),
+    # Phase 8: Property Valuation
+    "val_welcome": (
+        "📊 <b>UyAI — Bozor baholash xizmati</b>\n\n"
+        "Ushbu xizmat UyAI bazasidagi tasdiqlangan e'lonlar va sun'iy intellekt tahlili "
+        "asosida mulkingizning <b>taxminiy bozor bahosini</b> aniqlab beradi.\n\n"
+        "⚠️ <i>Eslatma: Bu rasmiy ekspertiza, bank yoki kadastr baholashi emas, "
+        "balki joriy bozor e'lonlariga asoslangan ko‘rsatkichdir.</i>\n\n"
+        "Boshlash uchun mulk bo‘yicha operatsiya turini tanlang:"
+    ),
+    "val_unsupported_type": (
+        "ℹ️ <b>Diqqat:</b> Hozirgi bosqichda avtomatik bozor baholash faqat <b>kvartira</b> "
+        "va <b>hovli uylar</b> uchun mavjud.\n\n"
+        "Tijorat ko‘chmas mulki yoki yer uchastkalari bo‘yicha aniq baho olish uchun "
+        "«👨‍💼 Broker bilan bog‘lanish» xizmatidan foydalanishingiz mumkin."
+    ),
+    "val_choose_listing_type": "Mulk bo‘yicha operatsiya turini tanlang:",
+    "val_choose_property_type": "Ko‘chmas mulk turini tanlang:",
+    "val_choose_region": "Hududni tanlang yoki nomini yozing (masalan, Toshkent shahri):",
+    "val_choose_district": "Tumanni tanlang yoki yozing (masalan, Chilonzor):",
+    "val_choose_rooms": "Xonalar sonini tanlang:",
+    "val_ask_area": "Mulkning umumiy maydonini m² da kiriting (masalan, 56 yoki 72.5):",
+    "val_invalid_area": (
+        "Iltimos, maydonni noldan katta musbat son ko‘rinishida kiriting (masalan: 65):"
+    ),
+    "val_choose_condition": "Mulkning ta'mirlanish holatini tanlang:",
+    "val_ask_floor": (
+        "Qavat va binoning umumiy qavatlar sonini kiriting (masalan: <b>4/9</b> yoki <b>3</b>).\n"
+        "Agar bilmasangiz, o‘tkazib yuborishingiz mumkin:"
+    ),
+    "val_choose_currency": "Baholash valyutasini tanlang:",
+    "val_calculating": "⏳ <i>Bozor ma'lumotlari tahlil qilinmoqda...</i>",
+    "val_insufficient_data": (
+        "🔍 <b>Taqqoslama ma'lumotlar yetarli emas</b>\n\n"
+        "Afsuski, bazada kiritilgan parametrlarga mos keluvchi yetarli tasdiqlangan "
+        "e'lonlar topilmadi.\n\n"
+        "💡 <i>Maslahat:</i> Ko‘chmas mulk bo‘yicha to‘g‘ri narxni belgilash uchun "
+        "professional brokerimiz bilan bog‘lanishingiz mumkin."
+    ),
+    "val_card_title": "📊 <b>AI BOZOR BAHOSI</b>",
+    "val_comps_header": "🏘 <b>Tahlil qilingan o‘xshash tasdiqlangan e'lonlar:</b>\n",
+    "val_no_comps": "Taqqoslangan e'lonlar mavjud emas.",
 }

@@ -18,6 +18,7 @@ from app.bot.handlers import (
     search_router,
     settings_router,
     start_router,
+    valuation_router,
 )
 from app.bot.middlewares.db import DatabaseSessionMiddleware
 from app.bot.middlewares.escape import MenuEscapeMiddleware
@@ -51,6 +52,7 @@ def create_dispatcher() -> Dispatcher:
         my_properties_router,
         settings_router,
         ai_broker_router,
+        valuation_router,
         menu_router,
     ]
     for r in routers:

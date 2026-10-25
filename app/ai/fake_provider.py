@@ -6,6 +6,7 @@ from typing import Any
 
 from app.ai.interfaces import LLMProvider
 from app.ai.schemas import AIBrokerIntent
+from app.schemas.valuation import ValuationExplanation, ValuationSafeContext
 
 
 class FakeLLMProvider(LLMProvider):
@@ -14,8 +15,13 @@ class FakeLLMProvider(LLMProvider):
     def __init__(self) -> None:
         self.intent_queue: list[AIBrokerIntent] = []
         self.response_queue: list[str] = []
+        self.explanation_queue: list[ValuationExplanation] = []
         self.error_to_raise: Exception | None = None
         self.recorded_calls: list[dict[str, Any]] = []
+
+    def set_next_explanation(self, explanation: ValuationExplanation) -> None:
+        """Enqueue a specific ValuationExplanation to be returned on next explain_valuation call."""
+        self.explanation_queue.append(explanation)
 
     def set_next_intent(self, intent: AIBrokerIntent) -> None:
         """Enqueue a specific intent to be returned on next parse_intent call."""
@@ -227,3 +233,67 @@ class FakeLLMProvider(LLMProvider):
         if language == "ru":
             return "Объект соответствует вашему запросу."
         return "Ko‘chmas mulk ma'lumotlari tasdiqlangan bazadan olindi."
+
+    async def explain_valuation(
+        self,
+        context: ValuationSafeContext,
+        language: str = "uz",
+    ) -> ValuationExplanation:
+        """Return enqueued or deterministic mock valuation explanation."""
+        self.recorded_calls.append(
+            {
+                "method": "explain_valuation",
+                "context": context.model_dump(),
+                "lang": language,
+            }
+        )
+
+        if self.error_to_raise:
+            err = self.error_to_raise
+            self.error_to_raise = None
+            raise err
+
+        if self.explanation_queue:
+            return self.explanation_queue.pop(0)
+
+        if language == "ru":
+            return ValuationExplanation(
+                summary=(
+                    f"Оценка сформирована на основе {context.comparable_count} похожих объектов "
+                    f"в районе {context.district}. Уровень достоверности: {context.confidence}."
+                ),
+                positive_factors=[
+                    f"Популярная локация: {context.district}",
+                    f"Востребованная планировка: {context.rooms} комн.",
+                ],
+                negative_factors=[
+                    "Возможны сезонные колебания спроса на рынке",
+                ],
+                missing_information=[
+                    "Точный кадастровый план и состояние коммуникаций",
+                ],
+                recommendation=(
+                    "Рекомендуем использовать данный диапазон в качестве ориентира при торгах."
+                ),
+            )
+
+        return ValuationExplanation(
+            summary=(
+                f"Baholash {context.district} tumanidagi {context.comparable_count} ta o‘xshash "
+                f"tasdiqlangan e'longa asoslandi. Ishonchlilik darajasi: {context.confidence}."
+            ),
+            positive_factors=[
+                f"Qulay joylashuv: {context.district}",
+                f"Xaridorgir xonalar soni: {context.rooms} xona",
+            ],
+            negative_factors=[
+                "Bozor talabining oylik tebranishlari ta'sir qilishi mumkin",
+            ],
+            missing_information=[
+                "Mulkning ichki kadastr rejasi va kommunikatsiyalar holati",
+            ],
+            recommendation=(
+                "Ushbu narx oralig‘ini savdolashuvda boshlang‘ich mo‘ljal sifatida qo‘llash "
+                "tavsiya etiladi."
+            ),
+        )
