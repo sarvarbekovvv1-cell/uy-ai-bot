@@ -10,6 +10,7 @@ from app.database.base import Base
 
 if TYPE_CHECKING:
     from app.models.favorite import Favorite
+    from app.models.lead import Lead, LeadEvent, LeadFollowUp, LeadNote
     from app.models.property import Property
     from app.models.role import Role
     from app.models.viewing_request import ViewingRequest
@@ -71,6 +72,36 @@ class User(Base):
         "ViewingRequest",
         foreign_keys="ViewingRequest.broker_user_id",
         back_populates="broker",
+        lazy="selectin",
+    )
+    leads_as_customer: Mapped[list["Lead"]] = relationship(
+        "Lead",
+        foreign_keys="Lead.customer_user_id",
+        back_populates="customer",
+        lazy="selectin",
+    )
+    leads_as_broker: Mapped[list["Lead"]] = relationship(
+        "Lead",
+        foreign_keys="Lead.broker_user_id",
+        back_populates="broker",
+        lazy="selectin",
+    )
+    lead_followups: Mapped[list["LeadFollowUp"]] = relationship(
+        "LeadFollowUp",
+        foreign_keys="LeadFollowUp.broker_user_id",
+        back_populates="broker",
+        lazy="selectin",
+    )
+    lead_notes: Mapped[list["LeadNote"]] = relationship(
+        "LeadNote",
+        foreign_keys="LeadNote.author_user_id",
+        back_populates="author",
+        lazy="selectin",
+    )
+    lead_events: Mapped[list["LeadEvent"]] = relationship(
+        "LeadEvent",
+        foreign_keys="LeadEvent.actor_user_id",
+        back_populates="actor",
         lazy="selectin",
     )
 

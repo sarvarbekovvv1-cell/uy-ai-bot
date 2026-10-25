@@ -1,6 +1,19 @@
 """SQLAlchemy database models for UyAI."""
 
 from app.models.favorite import Favorite
+from app.models.lead import (
+    ACTIVE_LEAD_STAGES,
+    FOLLOWUP_STATUSES,
+    FOLLOWUP_TYPES,
+    LEAD_SOURCES,
+    LEAD_STAGES,
+    LOST_REASONS,
+    TERMINAL_LEAD_STAGES,
+    Lead,
+    LeadEvent,
+    LeadFollowUp,
+    LeadNote,
+)
 from app.models.property import (
     CADASTRE_STATUSES,
     LISTING_TYPES,
@@ -30,6 +43,17 @@ __all__ = [
     "PropertyMedia",
     "Favorite",
     "ViewingRequest",
+    "Lead",
+    "LeadFollowUp",
+    "LeadNote",
+    "LeadEvent",
+    "LEAD_SOURCES",
+    "LEAD_STAGES",
+    "ACTIVE_LEAD_STAGES",
+    "TERMINAL_LEAD_STAGES",
+    "FOLLOWUP_TYPES",
+    "FOLLOWUP_STATUSES",
+    "LOST_REASONS",
     "REQUEST_TYPES",
     "REQUEST_STATUSES",
     "VIEWING_OUTCOMES",

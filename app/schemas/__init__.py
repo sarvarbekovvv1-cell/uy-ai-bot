@@ -1,5 +1,12 @@
 """Pydantic schemas module."""
 
+from app.schemas.lead import (
+    FollowUpCreateSchema,
+    LeadCloseSchema,
+    LeadCreateSchema,
+    LeadNoteCreateSchema,
+    LeadStageUpdateSchema,
+)
 from app.schemas.property_search import PropertySearchFilters
 from app.schemas.viewing_request import (
     BrokerContactCreate,
@@ -14,4 +21,9 @@ __all__ = [
     "BrokerContactCreate",
     "ViewingRejectSchema",
     "ViewingCompleteSchema",
+    "LeadCreateSchema",
+    "LeadStageUpdateSchema",
+    "LeadCloseSchema",
+    "FollowUpCreateSchema",
+    "LeadNoteCreateSchema",
 ]

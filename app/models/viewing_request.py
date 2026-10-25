@@ -18,6 +18,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
 
 if TYPE_CHECKING:
+    from app.models.lead import Lead
     from app.models.property import Property
     from app.models.user import User
 
@@ -144,6 +145,12 @@ class ViewingRequest(Base):
         "User",
         foreign_keys=[broker_user_id],
         back_populates="viewing_requests_as_broker",
+        lazy="selectin",
+    )
+    leads: Mapped[list["Lead"]] = relationship(
+        "Lead",
+        foreign_keys="Lead.source_request_id",
+        back_populates="source_request",
         lazy="selectin",
     )
 

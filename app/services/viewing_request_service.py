@@ -17,6 +17,7 @@ from app.models.viewing_request import VIEWING_OUTCOMES, ViewingRequest
 from app.repositories.property_repository import PropertyRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.viewing_request_repository import ViewingRequestRepository
+from app.services.lead_service import LeadService
 
 logger = get_logger(__name__)
 
@@ -40,10 +41,16 @@ class ViewingRequestService:
         viewing_repo: ViewingRequestRepository | None = None,
         property_repo: PropertyRepository | None = None,
         user_repo: UserRepository | None = None,
+        lead_service: LeadService | None = None,
     ) -> None:
         self.viewing_repo = viewing_repo or ViewingRequestRepository()
         self.property_repo = property_repo or PropertyRepository()
         self.user_repo = user_repo or UserRepository()
+        self.lead_service = lead_service or LeadService(
+            property_repo=self.property_repo,
+            user_repo=self.user_repo,
+            viewing_repo=self.viewing_repo,
+        )
 
     def validate_transition(self, current_status: str, target_status: str) -> None:
         """Validate state machine transition.
@@ -142,6 +149,7 @@ class ViewingRequestService:
             customer_user_id,
             property_id,
         )
+        await self.lead_service.ensure_lead_for_request(session, request=req)
         return req
 
     async def create_broker_contact_request(
@@ -184,6 +192,7 @@ class ViewingRequestService:
             customer_user_id,
             property_id,
         )
+        await self.lead_service.ensure_lead_for_request(session, request=req)
         return req
 
     async def list_customer_requests(
@@ -279,6 +288,12 @@ class ViewingRequestService:
         claimed = await self.viewing_repo.get_by_id(session, request_id)
         if not claimed:
             raise ViewingRequestNotFoundError("So‘rov topilmadi.")
+
+        await self.lead_service.ensure_lead_for_request(
+            session,
+            request=claimed,
+            broker_user_id=broker_user_id,
+        )
         return claimed
 
     async def accept_request(

@@ -1,6 +1,7 @@
 """Repositories package initialization."""
 
 from app.repositories.favorite_repository import FavoriteRepository
+from app.repositories.lead_repository import LeadRepository
 from app.repositories.property_media_repository import PropertyMediaRepository
 from app.repositories.property_repository import PropertyRepository
 from app.repositories.role_repository import RoleRepository
@@ -14,4 +15,5 @@ __all__ = [
     "PropertyMediaRepository",
     "FavoriteRepository",
     "ViewingRequestRepository",
+    "LeadRepository",
 ]

@@ -1,6 +1,7 @@
 """Telegram bot handlers aggregation."""
 
 from app.bot.handlers.appointments import appointments_router
+from app.bot.handlers.broker_cabinet import broker_cabinet_router
 from app.bot.handlers.broker_requests import broker_requests_router
 from app.bot.handlers.common import common_router
 from app.bot.handlers.favorites import favorites_router
@@ -22,6 +23,7 @@ __all__ = [
     "favorites_router",
     "appointments_router",
     "broker_requests_router",
+    "broker_cabinet_router",
     "my_properties_router",
     "review_router",
     "settings_router",

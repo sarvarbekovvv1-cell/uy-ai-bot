@@ -75,3 +75,13 @@ class BrokerViewingStates(StatesGroup):
     """Workflow states for broker managing viewing requests."""
 
     waiting_rejection_reason = State()
+
+
+class BrokerCabinetStates(StatesGroup):
+    """Workflow states for Broker Cabinet and Lead management."""
+
+    waiting_lost_reason = State()
+    waiting_followup_type = State()
+    waiting_followup_date = State()
+    waiting_followup_note = State()
+    waiting_note_text = State()

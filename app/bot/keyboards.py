@@ -720,3 +720,359 @@ def get_broker_outcome_keyboard(request_id: int, lang: str = "uz") -> InlineKeyb
             ],
         ]
     )
+
+
+# --- Phase 6: Broker Cabinet & Leads Keyboards ---
+
+
+def get_broker_cabinet_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build root menu keyboard for Broker Cabinet."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_unassigned_leads", lang),
+                    callback_data="broker_cab:unassigned:0",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("btn_my_leads", lang),
+                    callback_data="broker_cab:my:0",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_tasks_today", lang),
+                    callback_data="broker_cab:tasks_today:0",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("btn_tasks_overdue", lang),
+                    callback_data="broker_cab:tasks_overdue:0",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_lead_stats", lang),
+                    callback_data="broker_cab:stats",
+                )
+            ],
+        ]
+    )
+
+
+def get_broker_leads_list_keyboard(
+    leads: list,
+    page: int,
+    total_pages: int,
+    category: str,
+    lang: str = "uz",
+) -> InlineKeyboardMarkup:
+    """Build list of leads with pagination buttons."""
+    rows: list[list[InlineKeyboardButton]] = []
+
+    for lead in leads:
+        stage_title = get_text(f"stage_{lead.stage}", lang)
+        btn_text = f"#{lead.id} • {stage_title} • #{lead.property_id}"
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=btn_text,
+                    callback_data=f"lead_view:{lead.id}",
+                )
+            ]
+        )
+
+    # Navigation buttons
+    nav_row: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav_row.append(
+            InlineKeyboardButton(
+                text="⬅️ Oldingi",
+                callback_data=f"broker_cab:{category}:{page - 1}",
+            )
+        )
+    if page < total_pages - 1:
+        nav_row.append(
+            InlineKeyboardButton(
+                text="Keyingi ➡️",
+                callback_data=f"broker_cab:{category}:{page + 1}",
+            )
+        )
+    if nav_row:
+        rows.append(nav_row)
+
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=get_text("btn_back_to_cabinet", lang),
+                callback_data="broker_cab:home",
+            )
+        ]
+    )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def get_lead_card_keyboard(
+    lead_id: int,
+    stage: str,
+    is_assigned_to_me: bool = False,
+    is_unassigned: bool = False,
+    lang: str = "uz",
+) -> InlineKeyboardMarkup:
+    """Build action buttons for a single lead card."""
+    rows: list[list[InlineKeyboardButton]] = []
+
+    if is_unassigned:
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_claim_lead", lang),
+                    callback_data=f"lead_act:claim:{lead_id}",
+                )
+            ]
+        )
+    elif is_assigned_to_me:
+        if stage not in ("won", "lost"):
+            rows.append(
+                [
+                    InlineKeyboardButton(
+                        text=get_text("btn_change_stage", lang),
+                        callback_data=f"lead_act:stages:{lead_id}",
+                    ),
+                    InlineKeyboardButton(
+                        text=get_text("btn_add_task", lang),
+                        callback_data=f"lead_act:add_task:{lead_id}",
+                    ),
+                ]
+            )
+            rows.append(
+                [
+                    InlineKeyboardButton(
+                        text=get_text("btn_add_note", lang),
+                        callback_data=f"lead_act:add_note:{lead_id}",
+                    ),
+                    InlineKeyboardButton(
+                        text=get_text("btn_lead_history", lang),
+                        callback_data=f"lead_act:history:{lead_id}",
+                    ),
+                ]
+            )
+        else:
+            rows.append(
+                [
+                    InlineKeyboardButton(
+                        text=get_text("btn_lead_history", lang),
+                        callback_data=f"lead_act:history:{lead_id}",
+                    )
+                ]
+            )
+
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=get_text("btn_back_to_cabinet", lang),
+                callback_data="broker_cab:home",
+            )
+        ]
+    )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def get_lead_stage_choice_keyboard(lead_id: int, lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build keyboard for choosing next stage."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=f"📞 {get_text('stage_contacted', lang)}",
+                    callback_data=f"lead_setstage:{lead_id}:contacted",
+                ),
+                InlineKeyboardButton(
+                    text=f"🎯 {get_text('stage_qualified', lang)}",
+                    callback_data=f"lead_setstage:{lead_id}:qualified",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=f"📅 {get_text('stage_viewing_scheduled', lang)}",
+                    callback_data=f"lead_setstage:{lead_id}:viewing_scheduled",
+                ),
+                InlineKeyboardButton(
+                    text=f"🤝 {get_text('stage_negotiation', lang)}",
+                    callback_data=f"lead_setstage:{lead_id}:negotiation",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=f"🎉 {get_text('stage_won', lang)}",
+                    callback_data=f"lead_setstage:{lead_id}:won",
+                ),
+                InlineKeyboardButton(
+                    text=f"❌ {get_text('stage_lost', lang)}",
+                    callback_data=f"lead_setstage:{lead_id}:lost",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Orqaga",
+                    callback_data=f"lead_view:{lead_id}",
+                )
+            ],
+        ]
+    )
+
+
+def get_lead_lost_reason_keyboard(lead_id: int, lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build keyboard for selecting lost reason."""
+    reasons = [
+        "price",
+        "not_interested",
+        "competitor",
+        "property_unavailable",
+        "no_response",
+        "other",
+    ]
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text=get_text(f"lost_reason_{r}", lang),
+                callback_data=f"lead_lost:{lead_id}:{r}",
+            )
+        ]
+        for r in reasons
+    ]
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                text="⬅️ Bekor qilish",
+                callback_data=f"lead_view:{lead_id}",
+            )
+        ]
+    )
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_followup_type_keyboard(lead_id: int, lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build keyboard for choosing task type."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_text("task_call", lang),
+                    callback_data=f"fu_type:{lead_id}:call",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("task_message", lang),
+                    callback_data=f"fu_type:{lead_id}:message",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=get_text("task_meeting", lang),
+                    callback_data=f"fu_type:{lead_id}:meeting",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("task_other", lang),
+                    callback_data=f"fu_type:{lead_id}:other",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Bekor qilish",
+                    callback_data=f"lead_view:{lead_id}",
+                )
+            ],
+        ]
+    )
+
+
+def get_followup_time_shortcuts_keyboard(
+    lead_id: int,
+    task_type: str,
+    lang: str = "uz",  # noqa: ARG001
+) -> InlineKeyboardMarkup:
+    """Build shortcut keyboard for scheduling task time."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="⏱ 1 soatdan keyin",
+                    callback_data=f"fu_time:{lead_id}:{task_type}:1h",
+                ),
+                InlineKeyboardButton(
+                    text="⏱ 3 soatdan keyin",
+                    callback_data=f"fu_time:{lead_id}:{task_type}:3h",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🌅 Ertaga 10:00",
+                    callback_data=f"fu_time:{lead_id}:{task_type}:tomorrow_10",
+                ),
+                InlineKeyboardButton(
+                    text="🌆 Ertaga 15:00",
+                    callback_data=f"fu_time:{lead_id}:{task_type}:tomorrow_15",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📅 2 kundan keyin",
+                    callback_data=f"fu_time:{lead_id}:{task_type}:2d",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Bekor qilish",
+                    callback_data=f"lead_view:{lead_id}",
+                )
+            ],
+        ]
+    )
+
+
+def get_followup_actions_keyboard(
+    followup_id: int, lead_id: int, lang: str = "uz"
+) -> InlineKeyboardMarkup:
+    """Build action buttons for a follow-up task card."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Bajarildi",
+                    callback_data=f"fu_act:done:{followup_id}",
+                ),
+                InlineKeyboardButton(
+                    text="❌ Bekor qilish",
+                    callback_data=f"fu_act:cancel:{followup_id}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📌 Leadga o‘tish",
+                    callback_data=f"lead_view:{lead_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_back_to_cabinet", lang),
+                    callback_data="broker_cab:home",
+                )
+            ],
+        ]
+    )
+
+
+def get_lead_history_back_keyboard(
+    lead_id: int,
+    lang: str = "uz",  # noqa: ARG001
+) -> InlineKeyboardMarkup:
+    """Build back button for lead history/notes view."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Leadga qaytish",
+                    callback_data=f"lead_view:{lead_id}",
+                )
+            ]
+        ]
+    )

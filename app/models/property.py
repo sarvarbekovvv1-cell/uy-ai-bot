@@ -21,6 +21,7 @@ from app.database.base import Base
 
 if TYPE_CHECKING:
     from app.models.favorite import Favorite
+    from app.models.lead import Lead
     from app.models.property_media import PropertyMedia
     from app.models.user import User
     from app.models.viewing_request import ViewingRequest
@@ -145,6 +146,12 @@ class Property(Base):
     )
     viewing_requests: Mapped[list["ViewingRequest"]] = relationship(
         "ViewingRequest",
+        back_populates="property",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    leads: Mapped[list["Lead"]] = relationship(
+        "Lead",
         back_populates="property",
         cascade="all, delete-orphan",
         lazy="selectin",

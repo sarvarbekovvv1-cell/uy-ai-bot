@@ -63,3 +63,31 @@ class ViewingValidationError(UyAIError):
 
 class DuplicateViewingRequestError(UyAIError):
     """Raised when an active duplicate viewing request already exists."""
+
+
+class LeadNotFoundError(EntityNotFoundError):
+    """Raised when a requested lead cannot be found."""
+
+
+class LeadPermissionError(AuthorizationError):
+    """Raised when a user lacks permission to access or manage a lead."""
+
+
+class InvalidLeadTransitionError(UyAIError):
+    """Raised when an illegal lead stage transition is attempted."""
+
+
+class DuplicateLeadError(UyAIError):
+    """Raised when an active duplicate lead already exists for customer + property."""
+
+
+class LeadAlreadyAssignedError(UyAIError):
+    """Raised when attempting to assign a lead that is already claimed by another broker."""
+
+
+class LeadValidationError(UyAIError):
+    """Raised when lead input validation fails."""
+
+
+class FollowUpNotFoundError(EntityNotFoundError):
+    """Raised when a requested follow-up task cannot be found."""

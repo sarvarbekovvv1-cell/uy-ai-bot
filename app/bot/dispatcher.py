@@ -5,6 +5,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.bot.handlers import (
     appointments_router,
+    broker_cabinet_router,
     broker_requests_router,
     common_router,
     favorites_router,
@@ -36,6 +37,7 @@ def create_dispatcher() -> Dispatcher:
         start_router,
         review_router,
         broker_requests_router,
+        broker_cabinet_router,
         registration_router,
         property_submission_router,
         search_router,
