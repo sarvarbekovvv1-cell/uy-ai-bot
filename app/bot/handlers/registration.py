@@ -1,6 +1,7 @@
 """User onboarding and multi-step registration handlers."""
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +33,11 @@ async def handle_language_choice(
     if not callback.data or not callback.from_user:
         return
 
+    try:
+        await callback.answer()
+    except TelegramBadRequest:
+        pass
+
     lang = callback.data.split(":")[1]
     if lang not in ("uz", "ru"):
         lang = "uz"
@@ -55,7 +61,6 @@ async def handle_language_choice(
             get_text("consent_text", lang),
             reply_markup=get_consent_keyboard(lang),
         )
-    await callback.answer()
 
 
 @registration_router.callback_query(
@@ -78,7 +83,10 @@ async def handle_consent_accept(
 
     if callback.message and isinstance(callback.message, Message):
         await callback.message.edit_text(prompt_text)
-    await callback.answer()
+    try:
+        await callback.answer()
+    except TelegramBadRequest:
+        pass
 
 
 @registration_router.callback_query(
@@ -96,7 +104,10 @@ async def handle_consent_decline(
 
     if callback.message and isinstance(callback.message, Message):
         await callback.message.edit_text(get_text("consent_declined", lang))
-    await callback.answer()
+    try:
+        await callback.answer()
+    except TelegramBadRequest:
+        pass
 
 
 @registration_router.message(F.text, RegistrationStates.waiting_name)

@@ -1,6 +1,7 @@
 """Settings and language management handlers."""
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,7 +57,10 @@ async def handle_change_language_prompt(
             get_text("choose_language", lang),
             reply_markup=get_language_keyboard(),
         )
-    await callback.answer()
+    try:
+        await callback.answer()
+    except TelegramBadRequest:
+        pass
 
 
 @settings_router.callback_query(F.data.startswith("lang:"))
@@ -89,4 +93,7 @@ async def handle_settings_language_update(
         except Exception:
             pass
 
-    await callback.answer(get_text("language_updated", new_lang))
+    try:
+        await callback.answer(get_text("language_updated", new_lang))
+    except TelegramBadRequest:
+        pass

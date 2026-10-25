@@ -3,12 +3,13 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, Boolean, DateTime, String, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 
 if TYPE_CHECKING:
+    from app.models.property import Property
     from app.models.role import Role
 
 
@@ -17,7 +18,9 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=False)
     username: Mapped[str | None] = mapped_column(String(100), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
@@ -41,6 +44,13 @@ class User(Base):
         "Role",
         secondary="user_roles",
         back_populates="users",
+        lazy="selectin",
+    )
+    properties: Mapped[list["Property"]] = relationship(
+        "Property",
+        foreign_keys="Property.owner_user_id",
+        back_populates="owner",
+        cascade="all, delete-orphan",
         lazy="selectin",
     )
 

@@ -47,9 +47,79 @@ MESSAGES: dict[str, str] = {
     "btn_favorites": "❤️ Saqlangan uylar",
     "btn_appointments": "📅 Uchrashuvlarim",
     "btn_contact_broker": "👨‍💼 Broker bilan bog‘lanish",
+    "btn_my_properties": "🏘 Mening e'lonlarim",
     "btn_settings": "⚙️ Sozlamalar",
     # Placeholder
     "feature_in_development": "Bu funksiya keyingi bosqichda ishga tushiriladi.",
+    # Property Submission
+    "explain_sell_process": (
+        "💰 Ko‘chmas mulk sotish bo‘yicha e’lon berish boshlandi.\n"
+        "Iltimos, obyekt turini tanlang:"
+    ),
+    "explain_rent_process": (
+        "🏡 Ko‘chmas mulkni ijaraga berish bo‘yicha e’lon berish boshlandi.\n"
+        "Iltimos, obyekt turini tanlang:"
+    ),
+    "ask_region": "Viloyat yoki shaharni kiriting (masalan: Toshkent):",
+    "ask_district": "Tuman yoki mahallani kiriting (masalan: Chilonzor):",
+    "ask_address": "Aniq manzil yoki ko‘chani kiriting (masalan: 9-mavze, 12-uy):",
+    "ask_location": (
+        "Obyekt geolokatsiyasini yuborishingiz yoki pastdagi tugma orqali o‘tkazib "
+        "yuborishingiz mumkin:"
+    ),
+    "btn_send_location": "📍 Joylashuvni yuborish",
+    "btn_skip": "➡️ O‘tkazib yuborish",
+    "ask_rooms": "Xonalar sonini kiriting (faqat musbat son, masalan: 3):",
+    "invalid_rooms": "Noto‘g‘ri xonalar soni. Iltimos, musbat butun son kiriting (masalan: 2):",
+    "ask_total_area": "Umumiy maydonni m² da kiriting (masalan: 75.5):",
+    "invalid_area": "Noto‘g‘ri maydon. Iltimos, noldan katta musbat son kiriting (masalan: 65):",
+    "ask_floor": "Obyekt joylashgan qavatni kiriting (masalan: 5):",
+    "invalid_floor": "Noto‘g‘ri qavat raqami. Iltimos, butun son kiriting (masalan: 3):",
+    "ask_total_floors": "Binoning umumiy qavatlari sonini kiriting (masalan: 9):",
+    "invalid_total_floors": (
+        "Binoning umumiy qavati xonadon qavatidan kam bo‘lmasligi va musbat son bo‘lishi kerak:"
+    ),
+    "ask_condition": "Ta’mir holatini tanlang:",
+    "ask_furniture": "Mebel va maishiy texnika bormi?",
+    "ask_cadastre": "Kadastr hujjatlari holatini tanlang:",
+    "ask_price": "Narxni kiriting (faqat musbat son, masalan: 85000):",
+    "invalid_price": "Noto‘g‘ri narx. Iltimos, noldan katta musbat son kiriting:",
+    "ask_currency": "Valyutani tanlang:",
+    "ask_negotiable": "Narx kelishiladimi (savdolashish bormi)?",
+    "ask_description": (
+        "Obyekt haqida qo‘shimcha tavsif yozing (yoki 'yo‘q' deb yuboring):"
+    ),
+    "ask_photos": (
+        "Obyekt fotosuratlarini yuboring (kamida 1 ta, ko‘pi bilan 15 ta).\n"
+        "Yuklab bo‘lgach, pastdagi '✅ Rasmlar tayyor' tugmasini bosing:"
+    ),
+    "btn_photos_ready": "✅ Rasmlar tayyor",
+    "photo_received": "Fotosurat qabul qilindi. Jami rasmlar: {count} ta.",
+    "photo_duplicate": "Bu fotosurat allaqachon qo‘shilgan.",
+    "photo_max_reached": "Maksimal 15 ta rasm qabul qilindi. '✅ Rasmlar tayyor' tugmasini bosing.",
+    "photo_min_error": "Kamida 1 ta rasm yuborishingiz kerak!",
+    "preview_title": "🏠 E'lon ma'lumotlari tekshiruvi:",
+    "btn_confirm_submit": "✅ Tasdiqlash va yuborish",
+    "btn_cancel_submit": "✏️ Bekor qilish",
+    "submission_success": (
+        "✅ E'loningiz qabul qilindi.\n\n"
+        "Broker tekshiruvidan so‘ng e'lon faollashtiriladi."
+    ),
+    "my_properties_empty": "Sizda hali birorta ham e'lon mavjud emas.",
+    "my_properties_title": "🏘 Sizning e'lonlaringiz ro‘yxati:",
+    # Review
+    "review_no_pending": "Hozirda tasdiqlash uchun navbatda e'lonlar yo‘q.",
+    "review_item_title": "📋 Tekshiruvdagi e'lon ID #{id}:",
+    "btn_review_approve": "✅ Tasdiqlash",
+    "btn_review_reject": "❌ Rad etish",
+    "ask_rejection_reason": "Iltimos, rad etish sababini batafsil yozing:",
+    "listing_approved_broker": "E'lon #{id} muvaffaqiyatli tasdiqlandi.",
+    "listing_rejected_broker": "E'lon #{id} rad etildi.",
+    "approved_notification": "✅ Sizning #{id}-raqamli ko‘chmas mulk e'loningiz tasdiqlandi!",
+    "rejected_notification": (
+        "❌ Sizning #{id}-raqamli ko‘chmas mulk e'loningiz rad etildi.\n\nSabab: {reason}"
+    ),
+    "unauthorized_review": "Sizda e'lonlarni tekshirish vakolati mavjud emas.",
     # Settings
     "settings_title": "⚙️ Sozlamalar bo‘limi:",
     "btn_change_language": "🌐 Tilni o‘zgartirish",

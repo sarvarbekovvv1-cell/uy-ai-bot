@@ -13,8 +13,6 @@ menu_router = Router(name="menu")
 PLACEHOLDER_BUTTON_KEYS = [
     "btn_buy",
     "btn_rent",
-    "btn_sell",
-    "btn_lease",
     "btn_valuation",
     "btn_map",
     "btn_ai_broker",

@@ -1,6 +1,13 @@
 """Repositories package initialization."""
 
+from app.repositories.property_media_repository import PropertyMediaRepository
+from app.repositories.property_repository import PropertyRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 
-__all__ = ["UserRepository", "RoleRepository"]
+__all__ = [
+    "UserRepository",
+    "RoleRepository",
+    "PropertyRepository",
+    "PropertyMediaRepository",
+]

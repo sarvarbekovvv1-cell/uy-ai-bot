@@ -61,7 +61,7 @@ async def start_bot() -> None:
 
     logger.info("Starting Telegram bot polling for %s...", settings.app_name)
     try:
-        await dispatcher.start_polling(bot)
+        await dispatcher.start_polling(bot, drop_pending_updates=True)
     finally:
         await bot.session.close()
         logger.info("Telegram bot polling stopped.")

@@ -4,16 +4,17 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Contact, Message
+from aiogram.types import CallbackQuery, Contact, Message
 from aiogram.types import User as TgUser
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.dispatcher import create_dispatcher
 from app.bot.handlers.common import handle_cancel_command, handle_help_command
 from app.bot.handlers.menu import handle_placeholder_menu_buttons
-from app.bot.handlers.registration import handle_contact_phone
+from app.bot.handlers.registration import handle_contact_phone, handle_language_choice
 from app.bot.handlers.settings import handle_settings_entry
 from app.bot.locales import get_text
+from app.bot.states import RegistrationStates
 from app.services.user_service import UserService
 
 
@@ -102,6 +103,88 @@ async def test_placeholder_menu_behavior() -> None:
         await handle_placeholder_menu_buttons(mock_message, mock_session)
 
     mock_message.answer.assert_awaited_once_with(get_text("feature_in_development", "uz"))
+
+
+@pytest.mark.asyncio
+async def test_language_callback_uzbek_advances_to_consent() -> None:
+    """Regression test: language choice (uz) advances FSM to consent step."""
+    mock_callback = AsyncMock(spec=CallbackQuery)
+    mock_callback.data = "lang:uz"
+    mock_callback.from_user = TgUser(id=7165062713, is_bot=False, first_name="TestUser")
+    mock_callback.message = AsyncMock(spec=Message)
+    mock_callback.message.edit_text = AsyncMock()
+    mock_callback.answer = AsyncMock()
+
+    mock_state = AsyncMock(spec=FSMContext)
+    mock_session = AsyncMock(spec=AsyncSession)
+
+    with patch.object(UserService, "initialize_user", new=AsyncMock()) as mock_init:
+        await handle_language_choice(mock_callback, mock_state, mock_session)
+
+        mock_callback.answer.assert_awaited_once()
+        mock_state.update_data.assert_awaited_once_with(language="uz")
+        mock_init.assert_awaited_once()
+        mock_state.set_state.assert_awaited_once_with(RegistrationStates.waiting_consent)
+
+        # Verify message was edited to show consent prompt
+        mock_callback.message.edit_text.assert_awaited_once()
+        assert get_text("consent_text", "uz") in mock_callback.message.edit_text.call_args[0][0]
+
+
+@pytest.mark.asyncio
+async def test_language_callback_russian_advances_to_consent() -> None:
+    """Regression test: language choice (ru) advances FSM to consent step."""
+    mock_callback = AsyncMock(spec=CallbackQuery)
+    mock_callback.data = "lang:ru"
+    mock_callback.from_user = TgUser(id=7165062713, is_bot=False, first_name="TestUser")
+    mock_callback.message = AsyncMock(spec=Message)
+    mock_callback.message.edit_text = AsyncMock()
+    mock_callback.answer = AsyncMock()
+
+    mock_state = AsyncMock(spec=FSMContext)
+    mock_session = AsyncMock(spec=AsyncSession)
+
+    with patch.object(UserService, "initialize_user", new=AsyncMock()) as mock_init:
+        await handle_language_choice(mock_callback, mock_state, mock_session)
+
+        mock_callback.answer.assert_awaited_once()
+        mock_state.update_data.assert_awaited_once_with(language="ru")
+        mock_init.assert_awaited_once()
+        mock_state.set_state.assert_awaited_once_with(RegistrationStates.waiting_consent)
+
+        # Verify message was edited to show consent prompt
+        mock_callback.message.edit_text.assert_awaited_once()
+        assert get_text("consent_text", "ru") in mock_callback.message.edit_text.call_args[0][0]
+
+
+@pytest.mark.asyncio
+async def test_user_initialization_db_insert_autoincrement() -> None:
+    """Regression test: verify user insert succeeds without NOT NULL constraint failed on id."""
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from app.database.base import Base
+
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with session_factory() as session:
+        user_service = UserService()
+        user = await user_service.initialize_user(
+            session,
+            telegram_id=7165062713,
+            language="uz",
+            first_name="RealUser",
+        )
+        await session.commit()
+
+        assert user.id is not None
+        assert user.id > 0
+        assert user.telegram_id == 7165062713
+        assert user.language == "uz"
+
+    await engine.dispose()
 
 
 @pytest.mark.asyncio

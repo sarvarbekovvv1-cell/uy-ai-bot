@@ -21,5 +21,21 @@ class EntityNotFoundError(UyAIError):
     """Raised when a requested entity does not exist."""
 
 
+class PropertyNotFoundError(EntityNotFoundError):
+    """Raised when a requested property cannot be found."""
+
+
+class PropertyAccessDeniedError(UyAIError):
+    """Raised when a user attempts an unauthorized action on a property."""
+
+
+class InvalidPropertyStatusError(UyAIError):
+    """Raised when an illegal property status transition is attempted."""
+
+
+class IncompletePropertyError(UyAIError):
+    """Raised when mandatory property listing fields or photos are missing."""
+
+
 class AuthorizationError(UyAIError):
     """Raised when a user lacks required permissions."""

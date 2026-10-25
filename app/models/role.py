@@ -55,7 +55,10 @@ class UserRole(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     role_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, index=True
