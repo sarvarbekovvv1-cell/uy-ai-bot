@@ -66,9 +66,7 @@ async def test_default_buyer_role_assignment() -> None:
     )
 
     # Verify assign_role called with DEFAULT_CUSTOMER_ROLE ('buyer')
-    mock_role_repo.assign_role.assert_awaited_once_with(
-        mock_session, 42, DEFAULT_CUSTOMER_ROLE
-    )
+    mock_role_repo.assign_role.assert_awaited_once_with(mock_session, 42, DEFAULT_CUSTOMER_ROLE)
 
 
 @pytest.mark.asyncio

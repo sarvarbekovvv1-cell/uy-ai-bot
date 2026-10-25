@@ -95,7 +95,7 @@ async def test_placeholder_menu_behavior() -> None:
     mock_message = AsyncMock(spec=Message)
     mock_message.answer = AsyncMock()
     mock_message.from_user = TgUser(id=123456, is_bot=False, first_name="Test")
-    mock_message.text = "🏠 Uy sotib olish"
+    mock_message.text = "📊 Uyimni baholash"
 
     mock_session = AsyncMock(spec=AsyncSession)
 

@@ -1,5 +1,6 @@
 """SQLAlchemy database models for UyAI."""
 
+from app.models.favorite import Favorite
 from app.models.property import (
     CADASTRE_STATUSES,
     LISTING_TYPES,
@@ -21,6 +22,7 @@ __all__ = [
     "DEFAULT_CUSTOMER_ROLE",
     "Property",
     "PropertyMedia",
+    "Favorite",
     "LISTING_TYPES",
     "PROPERTY_TYPES",
     "PROPERTY_CONDITIONS",

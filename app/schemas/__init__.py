@@ -1,4 +1,5 @@
-"""Pydantic schemas module.
+"""Pydantic schemas module."""
 
-Domain request and response schemas will be added in subsequent phases.
-"""
+from app.schemas.property_search import PropertySearchFilters
+
+__all__ = ["PropertySearchFilters"]

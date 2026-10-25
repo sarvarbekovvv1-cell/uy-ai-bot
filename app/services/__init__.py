@@ -1,6 +1,13 @@
 """Services package initialization."""
 
+from app.services.favorite_service import FavoriteService
+from app.services.property_search_service import PropertySearchService
 from app.services.property_service import PropertyService
 from app.services.user_service import UserService
 
-__all__ = ["UserService", "PropertyService"]
+__all__ = [
+    "UserService",
+    "PropertyService",
+    "PropertySearchService",
+    "FavoriteService",
+]

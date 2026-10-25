@@ -314,9 +314,7 @@ class PropertyService:
         await self.verify_reviewer_permission(session, reviewer_user_id, prop.listing_type)
 
         if prop.status not in ("submitted", "under_review"):
-            raise InvalidPropertyStatusError(
-                f"Cannot approve property in '{prop.status}' status."
-            )
+            raise InvalidPropertyStatusError(f"Cannot approve property in '{prop.status}' status.")
 
         updated = await self.property_repo.set_status(
             session,
@@ -329,9 +327,7 @@ class PropertyService:
         if not updated:
             raise PropertyNotFoundError(f"Property id={property_id} not found.")
 
-        logger.info(
-            "Property id=%d approved by reviewer_user_id=%d", property_id, reviewer_user_id
-        )
+        logger.info("Property id=%d approved by reviewer_user_id=%d", property_id, reviewer_user_id)
         return updated
 
     async def reject_listing(
@@ -353,9 +349,7 @@ class PropertyService:
         await self.verify_reviewer_permission(session, reviewer_user_id, prop.listing_type)
 
         if prop.status not in ("submitted", "under_review"):
-            raise InvalidPropertyStatusError(
-                f"Cannot reject property in '{prop.status}' status."
-            )
+            raise InvalidPropertyStatusError(f"Cannot reject property in '{prop.status}' status.")
 
         updated = await self.property_repo.set_status(
             session,
@@ -367,9 +361,7 @@ class PropertyService:
         if not updated:
             raise PropertyNotFoundError(f"Property id={property_id} not found.")
 
-        logger.info(
-            "Property id=%d rejected by reviewer_user_id=%d", property_id, reviewer_user_id
-        )
+        logger.info("Property id=%d rejected by reviewer_user_id=%d", property_id, reviewer_user_id)
         return updated
 
     async def get_owned_property(

@@ -1,13 +1,16 @@
 """Repository for Property database operations."""
 
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.property import Property
+
+if TYPE_CHECKING:
+    from app.schemas.property_search import PropertySearchFilters
 
 
 class PropertyRepository:
@@ -73,9 +76,7 @@ class PropertyRepository:
     async def get_by_id(self, session: AsyncSession, property_id: int) -> Property | None:
         """Fetch property by ID including associated media."""
         stmt = (
-            select(Property)
-            .options(selectinload(Property.media))
-            .where(Property.id == property_id)
+            select(Property).options(selectinload(Property.media)).where(Property.id == property_id)
         )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
@@ -139,9 +140,7 @@ class PropertyRepository:
     ) -> list[Property]:
         """List properties by status, optionally filtered by listing_type."""
         stmt = (
-            select(Property)
-            .options(selectinload(Property.media))
-            .where(Property.status == status)
+            select(Property).options(selectinload(Property.media)).where(Property.status == status)
         )
         if listing_type:
             stmt = stmt.where(Property.listing_type == listing_type)
@@ -169,3 +168,90 @@ class PropertyRepository:
 
         await session.flush()
         return prop
+
+    async def get_approved_by_id(self, session: AsyncSession, property_id: int) -> Property | None:
+        """Fetch approved property by ID including associated media.
+
+        CRITICAL SECURITY RULE:
+        Strictly rejects draft, submitted, under_review, rejected, archived,
+        sold, or rented properties.
+        """
+        stmt = (
+            select(Property)
+            .options(selectinload(Property.media))
+            .where(Property.id == property_id, Property.status == "approved")
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def search_approved(
+        self,
+        session: AsyncSession,
+        filters: "PropertySearchFilters",
+        limit: int = 5,
+        offset: int = 0,
+    ) -> tuple[list[Property], int]:
+        """Query approved properties matching search filters and return (items, total_count).
+
+        CRITICAL INVENTORY SECURITY RULE:
+        Public search ALWAYS strictly filters Property.status == 'approved'.
+        Never returns draft, submitted, under_review, rejected, archived, sold, or rented listings.
+        """
+        base_conditions = [
+            Property.status == "approved",
+            Property.listing_type == filters.listing_type,
+        ]
+
+        if filters.property_type and filters.property_type.lower() not in {
+            "all",
+            "hamma",
+            "barchasi",
+        }:
+            base_conditions.append(Property.property_type == filters.property_type)
+
+        if filters.region:
+            base_conditions.append(func.lower(Property.region) == filters.region.lower().strip())
+
+        if filters.district:
+            base_conditions.append(
+                func.lower(Property.district) == filters.district.lower().strip()
+            )
+
+        if filters.rooms is not None:
+            base_conditions.append(Property.rooms == filters.rooms)
+        elif filters.min_rooms is not None:
+            base_conditions.append(Property.rooms >= filters.min_rooms)
+
+        if filters.currency:
+            base_conditions.append(Property.currency == filters.currency)
+
+        if filters.min_price is not None:
+            base_conditions.append(Property.price >= filters.min_price)
+
+        if filters.max_price is not None:
+            base_conditions.append(Property.price <= filters.max_price)
+
+        if filters.min_area is not None:
+            base_conditions.append(Property.total_area >= filters.min_area)
+
+        # Count total matching
+        count_stmt = select(func.count(Property.id)).where(*base_conditions)
+        total_count = (await session.execute(count_stmt)).scalar() or 0
+
+        # Query items with media eager-loaded and deterministic sorting (newest approved first)
+        items_stmt = (
+            select(Property)
+            .options(selectinload(Property.media))
+            .where(*base_conditions)
+            .order_by(
+                Property.approved_at.desc().nullslast(),
+                Property.created_at.desc(),
+                Property.id.desc(),
+            )
+            .limit(limit)
+            .offset(offset)
+        )
+        items_res = await session.execute(items_stmt)
+        items = list(items_res.scalars().all())
+
+        return items, total_count

@@ -20,6 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
 
 if TYPE_CHECKING:
+    from app.models.favorite import Favorite
     from app.models.property_media import PropertyMedia
     from app.models.user import User
 
@@ -134,6 +135,12 @@ class Property(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
         order_by="PropertyMedia.sort_order",
+    )
+    favorites: Mapped[list["Favorite"]] = relationship(
+        "Favorite",
+        back_populates="property",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     def __repr__(self) -> str:

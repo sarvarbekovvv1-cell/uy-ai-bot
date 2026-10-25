@@ -1,6 +1,5 @@
 """Tests for Property and PropertyMedia models, types, and constraints."""
 
-
 from sqlalchemy import DateTime, Integer, Numeric, String
 
 from app.models.property import (

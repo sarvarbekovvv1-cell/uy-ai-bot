@@ -35,14 +35,10 @@ property_submission_router = Router(name="property_submission")
 
 # Buttons triggering listing workflows
 SELL_BUTTONS = {
-    locale_dict.get("btn_sell")
-    for locale_dict in LOCALES.values()
-    if locale_dict.get("btn_sell")
+    locale_dict.get("btn_sell") for locale_dict in LOCALES.values() if locale_dict.get("btn_sell")
 }
 RENT_BUTTONS = {
-    locale_dict.get("btn_lease")
-    for locale_dict in LOCALES.values()
-    if locale_dict.get("btn_lease")
+    locale_dict.get("btn_lease") for locale_dict in LOCALES.values() if locale_dict.get("btn_lease")
 }
 
 

@@ -8,7 +8,45 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
-from app.bot.locales import get_text
+from app.bot.locales import LOCALES, get_text
+
+MAIN_MENU_BUTTON_KEYS = (
+    "btn_buy",
+    "btn_rent",
+    "btn_sell",
+    "btn_lease",
+    "btn_valuation",
+    "btn_map",
+    "btn_ai_broker",
+    "btn_favorites",
+    "btn_appointments",
+    "btn_contact_broker",
+    "btn_my_properties",
+    "btn_settings",
+)
+
+MAIN_MENU_BUTTONS: set[str] = {
+    locale_dict[key]
+    for locale_dict in LOCALES.values()
+    for key in MAIN_MENU_BUTTON_KEYS
+    if key in locale_dict
+} | {
+    "🏠 Uy sotib olish",
+    "🏠 Купить недвижимость",
+    "🔑 Uy ijaraga olish",
+    "🔑 Арендовать недвижимость",
+    "🔑 Снять недвижимость",
+    "💰 Uyimni sotish",
+    "💰 Продать недвижимость",
+    "🏡 Uyimni ijaraga berish",
+    "🏡 Сдать в аренду",
+    "❤️ Saqlangan uylar",
+    "❤️ Сохраненные",
+    "🏘 Mening e'lonlarim",
+    "🏘 Мои объявления",
+    "⚙️ Sozlamalar",
+    "⚙️ Настройки",
+}
 
 
 def get_language_keyboard() -> InlineKeyboardMarkup:
@@ -300,6 +338,138 @@ def get_settings_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text=get_text("btn_change_language", lang),
                     callback_data="settings:change_lang",
+                )
+            ]
+        ]
+    )
+
+
+def get_search_property_type_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    """Build reply keyboard for selecting property type in search."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=get_text("btn_type_all", lang))],
+            [
+                KeyboardButton(text=get_text("type_apartment", lang)),
+                KeyboardButton(text=get_text("type_house", lang)),
+            ],
+            [
+                KeyboardButton(text=get_text("type_commercial", lang)),
+                KeyboardButton(text=get_text("type_land", lang)),
+            ],
+            [KeyboardButton(text=get_text("btn_cancel_submit", lang))],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def get_search_skip_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    """Build reply keyboard with a skip option."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=get_text("btn_skip", lang))],
+            [KeyboardButton(text=get_text("btn_cancel_submit", lang))],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def get_search_rooms_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    """Build reply keyboard for choosing rooms in search."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="1"), KeyboardButton(text="2"), KeyboardButton(text="3")],
+            [KeyboardButton(text="4"), KeyboardButton(text="5+")],
+            [
+                KeyboardButton(text=get_text("btn_rooms_any", lang)),
+                KeyboardButton(text=get_text("btn_cancel_submit", lang)),
+            ],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def get_search_currency_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
+    """Build reply keyboard for currency selection with skip option."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="USD"), KeyboardButton(text="UZS")],
+            [
+                KeyboardButton(text=get_text("btn_skip", lang)),
+                KeyboardButton(text=get_text("btn_cancel_submit", lang)),
+            ],
+        ],
+        resize_keyboard=True,
+    )
+
+
+def get_property_card_keyboard(
+    property_id: int, is_fav: bool = False, lang: str = "uz"
+) -> InlineKeyboardMarkup:
+    """Build inline keyboard for a search result card."""
+    fav_btn_text = get_text("btn_fav_remove" if is_fav else "btn_fav_add", lang)
+    fav_callback = f"search_prop:{'unfav' if is_fav else 'fav'}:{property_id}"
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_details", lang),
+                    callback_data=f"search_prop:view:{property_id}",
+                ),
+                InlineKeyboardButton(text=fav_btn_text, callback_data=fav_callback),
+            ]
+        ]
+    )
+
+
+def get_search_pagination_keyboard(
+    current_page: int, total_pages: int, lang: str = "uz"
+) -> InlineKeyboardMarkup:
+    """Build pagination inline keyboard for search result pages."""
+    nav_buttons: list[InlineKeyboardButton] = []
+    if current_page > 1:
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text=get_text("btn_prev", lang),
+                callback_data=f"search_page:{current_page - 1}",
+            )
+        )
+    nav_buttons.append(
+        InlineKeyboardButton(
+            text=f"{current_page}/{total_pages}",
+            callback_data="search_nav:noop",
+        )
+    )
+    if current_page < total_pages:
+        nav_buttons.append(
+            InlineKeyboardButton(
+                text=get_text("btn_next", lang),
+                callback_data=f"search_page:{current_page + 1}",
+            )
+        )
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            nav_buttons,
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_restart_search", lang),
+                    callback_data="search_nav:restart",
+                )
+            ],
+        ]
+    )
+
+
+def get_search_restart_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build inline keyboard offering to restart search."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_restart_search", lang),
+                    callback_data="search_nav:restart",
                 )
             ]
         ]

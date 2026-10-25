@@ -32,8 +32,7 @@ def test_unique_telegram_id_constraint() -> None:
     """2. Verify unique index and constraint on users.telegram_id."""
     table = User.__table__
     assert table.c.telegram_id.unique is True or any(
-        idx.unique and "telegram_id" in [col.name for col in idx.columns]
-        for idx in table.indexes
+        idx.unique and "telegram_id" in [col.name for col in idx.columns] for idx in table.indexes
     )
 
 
@@ -74,6 +73,5 @@ def test_role_uniqueness() -> None:
     """5. Verify that role names have unique constraint and index."""
     table = Role.__table__
     assert table.c.name.unique is True or any(
-        idx.unique and "name" in [col.name for col in idx.columns]
-        for idx in table.indexes
+        idx.unique and "name" in [col.name for col in idx.columns] for idx in table.indexes
     )

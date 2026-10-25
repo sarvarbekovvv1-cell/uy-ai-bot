@@ -51,7 +51,7 @@ async def handle_my_properties_list(
             f"📍 {p.region}, {p.district}\n"
             f"💰 {p.price:,.0f} {p.currency} | Status: <b>{p.status.upper()}</b>\n"
             f"📅 {date_str}\n"
-            f"{'—'*20}"
+            f"{'—' * 20}"
         )
 
     await message.answer("\n".join(lines), reply_markup=get_main_menu_keyboard(lang))

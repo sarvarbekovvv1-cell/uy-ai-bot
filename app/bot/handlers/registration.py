@@ -63,9 +63,7 @@ async def handle_language_choice(
         )
 
 
-@registration_router.callback_query(
-    F.data == "consent:accept", RegistrationStates.waiting_consent
-)
+@registration_router.callback_query(F.data == "consent:accept", RegistrationStates.waiting_consent)
 async def handle_consent_accept(
     callback: CallbackQuery,
     state: FSMContext,
@@ -89,9 +87,7 @@ async def handle_consent_accept(
         pass
 
 
-@registration_router.callback_query(
-    F.data == "consent:decline", RegistrationStates.waiting_consent
-)
+@registration_router.callback_query(F.data == "consent:decline", RegistrationStates.waiting_consent)
 async def handle_consent_decline(
     callback: CallbackQuery,
     state: FSMContext,

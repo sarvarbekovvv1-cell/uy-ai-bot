@@ -60,9 +60,6 @@ class PropertyMediaRepository:
 
     async def count_by_property(self, session: AsyncSession, property_id: int) -> int:
         """Count total media items for a property."""
-        stmt = (
-            select(func.count(PropertyMedia.id))
-            .where(PropertyMedia.property_id == property_id)
-        )
+        stmt = select(func.count(PropertyMedia.id)).where(PropertyMedia.property_id == property_id)
         result = await session.execute(stmt)
         return result.scalar_one() or 0

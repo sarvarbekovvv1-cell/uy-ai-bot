@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
 
 if TYPE_CHECKING:
+    from app.models.favorite import Favorite
     from app.models.property import Property
     from app.models.role import Role
 
@@ -50,6 +51,12 @@ class User(Base):
         "Property",
         foreign_keys="Property.owner_user_id",
         back_populates="owner",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    favorites: Mapped[list["Favorite"]] = relationship(
+        "Favorite",
+        back_populates="user",
         cascade="all, delete-orphan",
         lazy="selectin",
     )

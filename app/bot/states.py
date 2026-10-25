@@ -45,3 +45,17 @@ class PropertyReviewStates(StatesGroup):
     """Workflow states for staff property listing review."""
 
     waiting_rejection_reason = State()
+
+
+class PropertySearchStates(StatesGroup):
+    """Workflow states for customer property discovery and search."""
+
+    choosing_property_type = State()
+    waiting_region = State()
+    waiting_district = State()
+    choosing_rooms = State()
+    waiting_min_price = State()
+    waiting_max_price = State()
+    choosing_currency = State()
+    waiting_min_area = State()
+    showing_results = State()

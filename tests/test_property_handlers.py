@@ -109,6 +109,10 @@ async def test_photo_upload_and_preview_flow() -> None:
     with (
         patch.object(PropertyService, "add_photo", new=AsyncMock()),
         patch.object(PropertyService, "submit_listing", new=AsyncMock()),
+        patch(
+            "app.repositories.property_media_repository.PropertyMediaRepository.count_by_property",
+            new=AsyncMock(return_value=1),
+        ),
     ):
         # 1. Upload photo
         await handle_photo_upload(mock_message_photo, mock_state, mock_session)
@@ -117,15 +121,11 @@ async def test_photo_upload_and_preview_flow() -> None:
         # 2. Photos ready
         mock_message_ready = AsyncMock(spec=Message)
         mock_message_ready.answer = AsyncMock()
-        with patch(
-            "app.repositories.property_media_repository.PropertyMediaRepository.count_by_property",
-            new=AsyncMock(return_value=1),
-        ):
-            await handle_photos_ready(mock_message_ready, mock_state, mock_session)
+        await handle_photos_ready(mock_message_ready, mock_state, mock_session)
 
-            mock_state.set_state.assert_awaited_with(PropertySubmissionStates.waiting_confirmation)
-            mock_message_ready.answer.assert_awaited_once()
-            assert get_text("preview_title", "uz") in mock_message_ready.answer.call_args[0][0]
+        mock_state.set_state.assert_awaited_with(PropertySubmissionStates.waiting_confirmation)
+        mock_message_ready.answer.assert_awaited_once()
+        assert get_text("preview_title", "uz") in mock_message_ready.answer.call_args[0][0]
 
         # 3. Confirm submission
         mock_callback = AsyncMock(spec=CallbackQuery)

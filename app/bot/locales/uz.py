@@ -53,8 +53,7 @@ MESSAGES: dict[str, str] = {
     "feature_in_development": "Bu funksiya keyingi bosqichda ishga tushiriladi.",
     # Property Submission
     "explain_sell_process": (
-        "💰 Ko‘chmas mulk sotish bo‘yicha e’lon berish boshlandi.\n"
-        "Iltimos, obyekt turini tanlang:"
+        "💰 Ko‘chmas mulk sotish bo‘yicha e’lon berish boshlandi.\nIltimos, obyekt turini tanlang:"
     ),
     "explain_rent_process": (
         "🏡 Ko‘chmas mulkni ijaraga berish bo‘yicha e’lon berish boshlandi.\n"
@@ -86,9 +85,7 @@ MESSAGES: dict[str, str] = {
     "invalid_price": "Noto‘g‘ri narx. Iltimos, noldan katta musbat son kiriting:",
     "ask_currency": "Valyutani tanlang:",
     "ask_negotiable": "Narx kelishiladimi (savdolashish bormi)?",
-    "ask_description": (
-        "Obyekt haqida qo‘shimcha tavsif yozing (yoki 'yo‘q' deb yuboring):"
-    ),
+    "ask_description": ("Obyekt haqida qo‘shimcha tavsif yozing (yoki 'yo‘q' deb yuboring):"),
     "ask_photos": (
         "Obyekt fotosuratlarini yuboring (kamida 1 ta, ko‘pi bilan 15 ta).\n"
         "Yuklab bo‘lgach, pastdagi '✅ Rasmlar tayyor' tugmasini bosing:"
@@ -102,8 +99,7 @@ MESSAGES: dict[str, str] = {
     "btn_confirm_submit": "✅ Tasdiqlash va yuborish",
     "btn_cancel_submit": "✏️ Bekor qilish",
     "submission_success": (
-        "✅ E'loningiz qabul qilindi.\n\n"
-        "Broker tekshiruvidan so‘ng e'lon faollashtiriladi."
+        "✅ E'loningiz qabul qilindi.\n\nBroker tekshiruvidan so‘ng e'lon faollashtiriladi."
     ),
     "my_properties_empty": "Sizda hali birorta ham e'lon mavjud emas.",
     "my_properties_title": "🏘 Sizning e'lonlaringiz ro‘yxati:",
@@ -120,6 +116,44 @@ MESSAGES: dict[str, str] = {
         "❌ Sizning #{id}-raqamli ko‘chmas mulk e'loningiz rad etildi.\n\nSabab: {reason}"
     ),
     "unauthorized_review": "Sizda e'lonlarni tekshirish vakolati mavjud emas.",
+    # Search & Discovery
+    "search_start_sale": (
+        "🏠 Uy sotib olish bo‘yicha qidiruv:\nQanday ko‘chmas mulk turini qidiryapsiz?"
+    ),
+    "search_start_rent": (
+        "🔑 Uy ijaraga olish bo‘yicha qidiruv:\nQanday ko‘chmas mulk turini qidiryapsiz?"
+    ),
+    "btn_type_all": "🌐 Barchasi",
+    "type_apartment": "🏢 Kvartira",
+    "type_house": "🏡 Hovli / Uy",
+    "type_commercial": "🏬 Tijorat",
+    "type_land": "🌱 Yer uchastkasi",
+    "search_ask_region": "📍 Hudud (viloyat yoki shahar) nomini kiriting (masalan: Toshkent):",
+    "search_ask_district": "📍 Tumanni kiriting yoki o‘tkazib yuboring (masalan: Chilonzor):",
+    "search_ask_rooms": "🚪 Xonalar sonini tanlang:",
+    "btn_rooms_any": "Farqi yo‘q",
+    "search_ask_min_price": "💰 Minimal narxni kiriting (raqamda) yoki o‘tkazib yuboring:",
+    "search_ask_max_price": "💰 Maksimal narxni kiriting (raqamda) yoki o‘tkazib yuboring:",
+    "search_ask_currency": "💵 Qidirilayotgan narx valyutasini tanlang:",
+    "search_ask_min_area": "📐 Minimal maydonni kiriting (m² da) yoki o‘tkazib yuboring:",
+    "search_searching": "🔎 Mos e'lonlar qidirilmoqda...",
+    "search_no_results": "😕 Talablaringizga mos e'lon topilmadi.",
+    "search_results_found": "✅ Qidiruvingiz bo‘yicha mos e'lonlar (Sahifa {page}/{total_pages}):",
+    "btn_restart_search": "🔄 Qidiruvni o‘zgartirish",
+    "btn_details": "👁 Batafsil",
+    "btn_fav_add": "❤️ Saqlash",
+    "btn_fav_remove": "💔 Saqlanganlardan olib tashlash",
+    "fav_added_alert": "✅ E'lon saqlanganlarga qo‘shildi.",
+    "fav_removed_alert": "❌ E'lon saqlanganlardan olib tashlandi.",
+    "btn_prev": "⬅️ Oldingi",
+    "btn_next": "➡️ Keyingi",
+    "property_not_found": "Ushbu e'lon mavjud emas yoki faol emas.",
+    "saved_properties_title": "❤️ Siz saqlagan uylar ro‘yxati:",
+    "saved_properties_empty": "Sizda hali saqlangan e'lonlar yo‘q.",
+    "price_invalid_number": "Iltimos, narxni faqat musbat raqamda kiriting.",
+    "price_range_error": "Maksimal narx minimal narxdan kam bo‘lishi mumkin emas.",
+    "area_invalid_number": "Iltimos, maydonni to‘g‘ri musbat raqamda kiriting.",
+    "detail_title": "📋 Ko‘chmas mulk batafsil ma'lumoti (#{id}):",
     # Settings
     "settings_title": "⚙️ Sozlamalar bo‘limi:",
     "btn_change_language": "🌐 Tilni o‘zgartirish",
