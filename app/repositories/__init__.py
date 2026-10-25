@@ -5,6 +5,7 @@ from app.repositories.property_media_repository import PropertyMediaRepository
 from app.repositories.property_repository import PropertyRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.viewing_request_repository import ViewingRequestRepository
 
 __all__ = [
     "UserRepository",
@@ -12,4 +13,5 @@ __all__ = [
     "PropertyRepository",
     "PropertyMediaRepository",
     "FavoriteRepository",
+    "ViewingRequestRepository",
 ]

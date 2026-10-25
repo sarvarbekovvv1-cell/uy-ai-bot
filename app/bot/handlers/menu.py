@@ -14,7 +14,6 @@ PLACEHOLDER_BUTTON_KEYS = [
     "btn_valuation",
     "btn_map",
     "btn_ai_broker",
-    "btn_appointments",
     "btn_contact_broker",
 ]
 

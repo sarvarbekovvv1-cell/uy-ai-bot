@@ -479,3 +479,244 @@ def get_search_restart_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
 def get_remove_keyboard() -> ReplyKeyboardRemove:
     """Return helper removing reply keyboard."""
     return ReplyKeyboardRemove()
+
+
+# --- Phase 5: Appointments, Viewing, & Broker Contact Keyboards ---
+
+
+def get_property_details_keyboard(
+    property_id: int, is_fav: bool = False, lang: str = "uz"
+) -> InlineKeyboardMarkup:
+    """Build action keyboard for detailed property view."""
+    fav_btn_text = get_text("btn_fav_remove" if is_fav else "btn_fav_add", lang)
+    fav_callback = f"search_prop:{'unfav' if is_fav else 'fav'}:{property_id}"
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_book_viewing", lang),
+                    callback_data=f"viewing:create:{property_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_contact_broker_action", lang),
+                    callback_data=f"broker:contact:{property_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(text=fav_btn_text, callback_data=fav_callback),
+            ],
+        ]
+    )
+
+
+def get_viewing_date_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build inline keyboard for viewing date selection."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_date_today", lang),
+                    callback_data="view_date:today",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("btn_date_tomorrow", lang),
+                    callback_data="view_date:tomorrow",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_date_custom", lang),
+                    callback_data="view_date:custom",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_cancel_request", lang),
+                    callback_data="view_date:cancel",
+                )
+            ],
+        ]
+    )
+
+
+def get_viewing_time_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build inline keyboard for structured viewing time slots."""
+    times = [
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00",
+        "18:00",
+    ]
+    rows: list[list[InlineKeyboardButton]] = []
+    current_row: list[InlineKeyboardButton] = []
+
+    for t in times:
+        current_row.append(InlineKeyboardButton(text=f"🕐 {t}", callback_data=f"view_time:{t}"))
+        if len(current_row) == 3:
+            rows.append(current_row)
+            current_row = []
+    if current_row:
+        rows.append(current_row)
+
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=get_text("btn_cancel_request", lang),
+                callback_data="view_time:cancel",
+            )
+        ]
+    )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def get_viewing_confirm_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build confirmation inline keyboard for submitting viewing request."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_send_request", lang),
+                    callback_data="view_confirm:yes",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("btn_cancel_request", lang),
+                    callback_data="view_confirm:no",
+                ),
+            ]
+        ]
+    )
+
+
+def get_broker_contact_confirm_keyboard(property_id: int, lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build inline keyboard to confirm broker contact request."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_send_request", lang),
+                    callback_data=f"broker_contact:confirm:{property_id}",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("btn_cancel_request", lang),
+                    callback_data="broker_contact:cancel",
+                ),
+            ]
+        ]
+    )
+
+
+def get_appointment_card_keyboard(
+    request_id: int, cancellable: bool = True, lang: str = "uz"
+) -> InlineKeyboardMarkup:
+    """Build inline keyboard for customer appointment card."""
+    buttons: list[list[InlineKeyboardButton]] = []
+    if cancellable:
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_cancel_request", lang),
+                    callback_data=f"req:cancel:{request_id}",
+                )
+            ]
+        )
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_appointment_cancel_confirm_keyboard(
+    request_id: int, lang: str = "uz"
+) -> InlineKeyboardMarkup:
+    """Build confirmation keyboard for cancelling appointment."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_confirm_cancel", lang),
+                    callback_data=f"req:cancel_confirm:{request_id}",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("btn_keep_request", lang),
+                    callback_data="req:cancel_back",
+                ),
+            ]
+        ]
+    )
+
+
+def get_broker_request_card_keyboard(
+    request_id: int,
+    status: str,
+    is_assigned_to_me: bool = False,
+    lang: str = "uz",
+) -> InlineKeyboardMarkup:
+    """Build actions keyboard for staff broker managing a viewing request."""
+    rows: list[list[InlineKeyboardButton]] = []
+
+    if status == "pending" and not is_assigned_to_me:
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_claim_request", lang),
+                    callback_data=f"broker_req:claim:{request_id}",
+                )
+            ]
+        )
+    elif status in ("pending", "assigned") and is_assigned_to_me:
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_accept_request", lang),
+                    callback_data=f"broker_req:accept:{request_id}",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("btn_reject_request", lang),
+                    callback_data=f"broker_req:reject:{request_id}",
+                ),
+            ]
+        )
+    elif status == "accepted":
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=get_text("btn_complete_request", lang),
+                    callback_data=f"broker_req:complete:{request_id}",
+                )
+            ]
+        )
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def get_broker_outcome_keyboard(request_id: int, lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build outcome selection keyboard for completing a viewing."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_text("outcome_interested", lang),
+                    callback_data=f"broker_out:interested:{request_id}",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("outcome_not_interested", lang),
+                    callback_data=f"broker_out:not_interested:{request_id}",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=get_text("outcome_reschedule", lang),
+                    callback_data=f"broker_out:reschedule_requested:{request_id}",
+                ),
+                InlineKeyboardButton(
+                    text=get_text("outcome_no_show", lang),
+                    callback_data=f"broker_out:no_show:{request_id}",
+                ),
+            ],
+        ]
+    )

@@ -173,4 +173,74 @@ MESSAGES: dict[str, str] = {
     ),
     "cancel_text": "Jarayon bekor qilindi.",
     "generic_error": "Xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko‘ring.",
+    # Phase 5: Appointments & Broker Contact
+    "btn_book_viewing": "📅 Ko‘rishga yozilish",
+    "btn_contact_broker_action": "👨‍💼 Broker bilan bog‘lanish",
+    "btn_date_today": "📅 Bugun",
+    "btn_date_tomorrow": "📅 Ertaga",
+    "btn_date_custom": "📅 Boshqa sana",
+    "btn_send_request": "✅ So‘rov yuborish",
+    "btn_claim_request": "📥 Qabul qilib olish",
+    "btn_accept_request": "✅ Qabul qilish",
+    "btn_reject_request": "❌ Rad etish",
+    "btn_complete_request": "🏁 Yakunlash",
+    "btn_cancel_request": "❌ Bekor qilish",
+    "btn_confirm_cancel": "✅ Ha, bekor qilish",
+    "btn_keep_request": "Ortga",
+    "outcome_interested": "👍 Qiziqdi",
+    "outcome_not_interested": "👎 Qiziqmadi",
+    "outcome_reschedule": "🔁 Qayta rejalashtirish",
+    "outcome_no_show": "🚫 Kelmadi",
+    "viewing_ask_date": "📅 Uyni ko‘rish uchun qulay sanani tanlang:",
+    "viewing_ask_custom_date": (
+        "Iltimos, sanani quyidagi formatda kiriting: <b>KK.OO.YYYY</b> (masalan, 28.10.2026):"
+    ),
+    "viewing_invalid_date": (
+        "Noto‘g‘ri sana formati yoki o‘tgan sana. Iltimos, qayta kiriting (KK.OO.YYYY):"
+    ),
+    "viewing_ask_time": "🕐 Afzal ko‘rgan vaqtingizni tanlang:",
+    "viewing_ask_comment": (
+        "Qo‘shimcha izoh yoki savolingiz bormi? (Izoh yozing yoki pastdagi tugmani bosing):"
+    ),
+    "viewing_preview_title": "📋 Ko‘rish so‘rovi tekshiruvi:",
+    "viewing_submitted_success": (
+        "✅ Ko‘rish so‘rovingiz yuborildi. "
+        "Broker ko‘rib chiqqach va tasdiqlagach, uchrashuv belgilangan hisoblanadi."
+    ),
+    "broker_contact_confirm_prompt": (
+        "👨‍💼 Ushbu ko‘chmas mulk bo‘yicha broker bilan bog‘lanish so‘rovini yuborishni "
+        "tasdiqlaysizmi?"
+    ),
+    "broker_contact_submitted_success": (
+        "✅ So‘rovingiz yuborildi. Broker tez orada siz bilan bog‘lanadi."
+    ),
+    "appointments_empty": "Sizda hali uchrashuv yoki broker so‘rovlari mavjud emas.",
+    "appointments_title": "📅 <b>Mening uchrashuvlarim va so‘rovlarim:</b>",
+    "cancel_confirm_prompt": "Haqiqatan ham ushbu so‘rovni bekor qilmoqchimisiz?",
+    "cancel_request_success": "So‘rov bekor qilindi.",
+    "broker_requests_empty": "Hozirda yangi so‘rovlar yo‘q.",
+    "broker_requests_title": "📋 <b>Ko‘rish va broker so‘rovlari:</b>",
+    "broker_claim_success": "So‘rov sizga biriktirildi.",
+    "broker_accept_success": "So‘rov tasdiqlandi va mijozga xabar yuborildi.",
+    "broker_ask_reject_reason": "Iltimos, so‘rovni rad etish sababini batafsil kiriting:",
+    "broker_reject_success": "So‘rov rad etildi va mijozga xabar yuborildi.",
+    "broker_select_outcome": "Ko‘rish natijasini tanlang:",
+    "broker_complete_success": "Ko‘rish yakunlandi va natija saqlandi.",
+    "customer_notify_accepted": (
+        "✅ Sizning #{prop_id} bo‘yicha ko‘rish so‘rovingiz broker tomonidan tasdiqlandi!\n"
+        "📅 Sana: {date}\n🕐 Vaqt: {time}"
+    ),
+    "customer_notify_contact_accepted": (
+        "✅ Sizning #{prop_id} bo‘yicha broker bilan bog‘lanish so‘rovingiz qabul qilindi. "
+        "Tez orada siz bilan bog‘lanishadi."
+    ),
+    "customer_notify_rejected": (
+        "❌ Sizning #{prop_id} bo‘yicha so‘rovingiz rad etildi.\nSabab: {reason}"
+    ),
+    "customer_notify_completed": (
+        "🏁 #{prop_id} bo‘yicha ko‘rish yakunlandi. Tashrifingiz uchun rahmat!"
+    ),
+    "duplicate_request_error": "Ushbu mulk bo‘yicha faol so‘rovingiz allaqachon mavjud.",
+    "property_unavailable_error": "Ko‘chmas mulk hozirda mavjud emas yoki faol emas.",
+    "broker_permission_denied": "Sizda so‘rovlarni boshqarish vakolati mavjud emas.",
 }

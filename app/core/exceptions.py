@@ -39,3 +39,27 @@ class IncompletePropertyError(UyAIError):
 
 class AuthorizationError(UyAIError):
     """Raised when a user lacks required permissions."""
+
+
+class ViewingRequestNotFoundError(EntityNotFoundError):
+    """Raised when a requested viewing request cannot be found."""
+
+
+class InvalidViewingTransitionError(UyAIError):
+    """Raised when an illegal viewing request status transition is attempted."""
+
+
+class ViewingPermissionError(AuthorizationError):
+    """Raised when a user lacks permission to view or manage a viewing request."""
+
+
+class PropertyUnavailableError(UyAIError):
+    """Raised when an action is attempted on an unavailable (non-approved) property."""
+
+
+class ViewingValidationError(UyAIError):
+    """Raised when viewing request input validation fails."""
+
+
+class DuplicateViewingRequestError(UyAIError):
+    """Raised when an active duplicate viewing request already exists."""

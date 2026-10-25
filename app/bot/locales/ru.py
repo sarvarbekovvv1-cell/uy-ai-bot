@@ -163,4 +163,69 @@ MESSAGES: dict[str, str] = {
     ),
     "cancel_text": "Процесс отменен.",
     "generic_error": "Произошла ошибка. Пожалуйста, попробуйте позже.",
+    # Phase 5: Appointments & Broker Contact
+    "btn_book_viewing": "📅 Записаться на просмотр",
+    "btn_contact_broker_action": "👨‍💼 Связаться с брокером",
+    "btn_date_today": "📅 Сегодня",
+    "btn_date_tomorrow": "📅 Завтра",
+    "btn_date_custom": "📅 Другая дата",
+    "btn_send_request": "✅ Отправить заявку",
+    "btn_claim_request": "📥 Взять в работу",
+    "btn_accept_request": "✅ Подтвердить",
+    "btn_reject_request": "❌ Отклонить",
+    "btn_complete_request": "🏁 Завершить",
+    "btn_cancel_request": "❌ Отменить",
+    "btn_confirm_cancel": "✅ Да, отменить",
+    "btn_keep_request": "Назад",
+    "outcome_interested": "👍 Заинтересован",
+    "outcome_not_interested": "👎 Не подошло",
+    "outcome_reschedule": "🔁 Перенести",
+    "outcome_no_show": "🚫 Не пришел",
+    "viewing_ask_date": "📅 Выберите удобную дату для просмотра объекта:",
+    "viewing_ask_custom_date": (
+        "Пожалуйста, введите дату в формате: <b>ДД.ММ.ГГГГ</b> (например, 28.10.2026):"
+    ),
+    "viewing_invalid_date": (
+        "Неверный формат даты или прошедшая дата. Введите снова (ДД.ММ.ГГГГ):"
+    ),
+    "viewing_ask_time": "🕐 Выберите удобное время:",
+    "viewing_ask_comment": (
+        "Есть пожелания или вопросы к брокеру? (Напишите комментарий или нажмите кнопку внизу):"
+    ),
+    "viewing_preview_title": "📋 Детали заявки на просмотр:",
+    "viewing_submitted_success": (
+        "✅ Заявка на просмотр отправлена. После подтверждения брокером встреча будет назначена."
+    ),
+    "broker_contact_confirm_prompt": (
+        "👨‍💼 Подтверждаете отправку запроса на связь с брокером по этому объекту?"
+    ),
+    "broker_contact_submitted_success": (
+        "✅ Запрос отправлен. Брокер свяжется с вами в ближайшее время."
+    ),
+    "appointments_empty": "У вас пока нет активных заявок на просмотр или связь с брокером.",
+    "appointments_title": "📅 <b>Мои встречи и заявки:</b>",
+    "cancel_confirm_prompt": "Вы уверены, что хотите отменить эту заявку?",
+    "cancel_request_success": "Заявка отменена.",
+    "broker_requests_empty": "На данный момент нет новых заявок.",
+    "broker_requests_title": "📋 <b>Заявки на просмотр и связь:</b>",
+    "broker_claim_success": "Заявка закреплена за вами.",
+    "broker_accept_success": "Заявка подтверждена, клиенту отправлено уведомление.",
+    "broker_ask_reject_reason": "Пожалуйста, подробно укажите причину отклонения заявки:",
+    "broker_reject_success": "Заявка отклонена, клиенту отправлено уведомление.",
+    "broker_select_outcome": "Выберите результат просмотра:",
+    "broker_complete_success": "Просмотр завершен, результат сохранен.",
+    "customer_notify_accepted": (
+        "✅ Ваша заявка по объекту #{prop_id} подтверждена брокером!\n"
+        "📅 Дата: {date}\n🕐 Время: {time}"
+    ),
+    "customer_notify_contact_accepted": (
+        "✅ Ваша заявка на связь с брокером по объекту #{prop_id} принята. Скоро с вами свяжутся."
+    ),
+    "customer_notify_rejected": (
+        "❌ Ваша заявка по объекту #{prop_id} отклонена.\nПричина: {reason}"
+    ),
+    "customer_notify_completed": ("🏁 Просмотр по объекту #{prop_id} завершен. Спасибо за визит!"),
+    "duplicate_request_error": "У вас уже есть активная заявка по этому объекту.",
+    "property_unavailable_error": "Объект недвижимости в данный момент недоступен.",
+    "broker_permission_denied": "У вас нет полномочий для управления этими заявками.",
 }

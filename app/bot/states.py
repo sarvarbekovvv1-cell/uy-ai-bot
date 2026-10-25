@@ -59,3 +59,19 @@ class PropertySearchStates(StatesGroup):
     choosing_currency = State()
     waiting_min_area = State()
     showing_results = State()
+
+
+class ViewingRequestStates(StatesGroup):
+    """Workflow states for scheduling a property viewing."""
+
+    choosing_date = State()
+    waiting_custom_date = State()
+    choosing_time = State()
+    waiting_comment = State()
+    confirming = State()
+
+
+class BrokerViewingStates(StatesGroup):
+    """Workflow states for broker managing viewing requests."""
+
+    waiting_rejection_reason = State()

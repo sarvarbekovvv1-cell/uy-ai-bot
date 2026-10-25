@@ -5,7 +5,11 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot.keyboards import get_main_menu_keyboard, get_property_card_keyboard
+from app.bot.keyboards import (
+    get_main_menu_keyboard,
+    get_property_card_keyboard,
+    get_property_details_keyboard,
+)
 from app.bot.locales import LOCALES, get_text
 from app.core.exceptions import PropertyNotFoundError
 from app.logging import get_logger
@@ -141,9 +145,21 @@ async def handle_add_favorite_callback(
             pass
 
         if callback.message and isinstance(callback.message, Message):
-            await callback.message.edit_reply_markup(
-                reply_markup=get_property_card_keyboard(property_id, is_fav=True, lang=lang)
+            is_details = False
+            existing_markup = getattr(callback.message, "reply_markup", None)
+            if existing_markup and hasattr(existing_markup, "inline_keyboard"):
+                for row in existing_markup.inline_keyboard:
+                    for btn in row:
+                        cb_data = getattr(btn, "callback_data", None)
+                        if cb_data and "viewing:create" in cb_data:
+                            is_details = True
+                            break
+            new_kb = (
+                get_property_details_keyboard(property_id, is_fav=True, lang=lang)
+                if is_details
+                else get_property_card_keyboard(property_id, is_fav=True, lang=lang)
             )
+            await callback.message.edit_reply_markup(reply_markup=new_kb)
     except PropertyNotFoundError:
         try:
             await callback.answer(get_text("property_not_found", lang), show_alert=True)
@@ -176,9 +192,21 @@ async def handle_remove_favorite_callback(
         pass
 
     if callback.message and isinstance(callback.message, Message):
-        await callback.message.edit_reply_markup(
-            reply_markup=get_property_card_keyboard(property_id, is_fav=False, lang=lang)
+        is_details = False
+        existing_markup = getattr(callback.message, "reply_markup", None)
+        if existing_markup and hasattr(existing_markup, "inline_keyboard"):
+            for row in existing_markup.inline_keyboard:
+                for btn in row:
+                    cb_data = getattr(btn, "callback_data", None)
+                    if cb_data and "viewing:create" in cb_data:
+                        is_details = True
+                        break
+        new_kb = (
+            get_property_details_keyboard(property_id, is_fav=False, lang=lang)
+            if is_details
+            else get_property_card_keyboard(property_id, is_fav=False, lang=lang)
         )
+        await callback.message.edit_reply_markup(reply_markup=new_kb)
 
 
 @favorites_router.callback_query(F.data.startswith("search_prop:view:"))
@@ -214,7 +242,7 @@ async def handle_view_property_details(
     if user:
         is_fav = await fav_service.is_favorite(session, user_id=user.id, property_id=property_id)
     details_text = format_detailed_view(prop, lang)
-    detail_kb = get_property_card_keyboard(prop.id, is_fav=is_fav, lang=lang)
+    detail_kb = get_property_details_keyboard(prop.id, is_fav=is_fav, lang=lang)
 
     if callback.message and isinstance(callback.message, Message):
         await callback.message.answer(details_text, reply_markup=detail_kb)

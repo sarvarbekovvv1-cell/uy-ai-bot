@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from app.models.favorite import Favorite
     from app.models.property_media import PropertyMedia
     from app.models.user import User
+    from app.models.viewing_request import ViewingRequest
 
 # Controlled Domain Constants
 LISTING_TYPES: tuple[str, ...] = ("sale", "rent")
@@ -138,6 +139,12 @@ class Property(Base):
     )
     favorites: Mapped[list["Favorite"]] = relationship(
         "Favorite",
+        back_populates="property",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    viewing_requests: Mapped[list["ViewingRequest"]] = relationship(
+        "ViewingRequest",
         back_populates="property",
         cascade="all, delete-orphan",
         lazy="selectin",

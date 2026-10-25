@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.models.favorite import Favorite
     from app.models.property import Property
     from app.models.role import Role
+    from app.models.viewing_request import ViewingRequest
 
 
 class User(Base):
@@ -58,6 +59,18 @@ class User(Base):
         "Favorite",
         back_populates="user",
         cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    viewing_requests_as_customer: Mapped[list["ViewingRequest"]] = relationship(
+        "ViewingRequest",
+        foreign_keys="ViewingRequest.customer_user_id",
+        back_populates="customer",
+        lazy="selectin",
+    )
+    viewing_requests_as_broker: Mapped[list["ViewingRequest"]] = relationship(
+        "ViewingRequest",
+        foreign_keys="ViewingRequest.broker_user_id",
+        back_populates="broker",
         lazy="selectin",
     )
 

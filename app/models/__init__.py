@@ -13,6 +13,12 @@ from app.models.property import (
 from app.models.property_media import PropertyMedia
 from app.models.role import DEFAULT_CUSTOMER_ROLE, SYSTEM_ROLES, Role, UserRole
 from app.models.user import User
+from app.models.viewing_request import (
+    REQUEST_STATUSES,
+    REQUEST_TYPES,
+    VIEWING_OUTCOMES,
+    ViewingRequest,
+)
 
 __all__ = [
     "User",
@@ -23,6 +29,10 @@ __all__ = [
     "Property",
     "PropertyMedia",
     "Favorite",
+    "ViewingRequest",
+    "REQUEST_TYPES",
+    "REQUEST_STATUSES",
+    "VIEWING_OUTCOMES",
     "LISTING_TYPES",
     "PROPERTY_TYPES",
     "PROPERTY_CONDITIONS",
