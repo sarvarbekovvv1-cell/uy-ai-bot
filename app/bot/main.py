@@ -42,6 +42,21 @@ async def start_bot() -> None:
         logger.error("Failed to initialize bot: %s", e)
         sys.exit(1)
 
+    # Initialize tables and system roles if needed
+    from app.database.base import Base
+    from app.database.session import get_engine, get_session_factory
+    from app.repositories.role_repository import RoleRepository
+
+    engine = get_engine()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        role_repo = RoleRepository()
+        await role_repo.ensure_default_roles(session)
+        await session.commit()
+
     dispatcher = create_dispatcher()
 
     logger.info("Starting Telegram bot polling for %s...", settings.app_name)

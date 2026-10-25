@@ -52,5 +52,8 @@ htmlcov/
 
 # Local database data & uploads
 postgres_data/
+*.db
+*.sqlite
+*.sqlite3
 media/
 uploads/

@@ -9,8 +9,10 @@ from app.config import Settings
 def test_default_configuration_loads() -> None:
     """Verify that default settings load cleanly without missing required fields."""
     settings = Settings(
+        _env_file=None,
         APP_ENV="testing",
         BOT_TOKEN="",
+        DATABASE_URL=None,
     )
     assert settings.app_name == "UyAI"
     assert settings.app_env == "testing"
@@ -22,7 +24,9 @@ def test_default_configuration_loads() -> None:
 def test_custom_database_url_assembly() -> None:
     """Verify database URL is constructed from components if not explicitly provided."""
     settings = Settings(
+        _env_file=None,
         APP_ENV="testing",
+        DATABASE_URL=None,
         DATABASE_HOST="db.internal",
         DATABASE_PORT=5433,
         DATABASE_NAME="custom_uyai",
