@@ -50,8 +50,13 @@ async def list_properties(
     """Return paginated list of properties with server-side filters and sorting."""
     stmt = select(Property)
 
-    if status_filter:
-        stmt = stmt.where(Property.status == status_filter)
+    if status_filter and status_filter != "all":
+        if status_filter in ("pending_approval", "submitted", "under_review"):
+            stmt = stmt.where(
+                Property.status.in_(("submitted", "under_review", "pending_approval"))
+            )
+        else:
+            stmt = stmt.where(Property.status == status_filter)
     if property_type:
         stmt = stmt.where(Property.property_type == property_type)
     if district:

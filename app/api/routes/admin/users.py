@@ -121,6 +121,7 @@ async def get_user_detail(
 
 
 @router.patch("/{user_id}/roles", status_code=status.HTTP_200_OK)
+@router.put("/{user_id}/roles", status_code=status.HTTP_200_OK)
 async def update_user_roles(
     user_id: int,
     request: Request,

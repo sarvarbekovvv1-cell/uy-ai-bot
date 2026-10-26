@@ -116,6 +116,28 @@ export const adminApi = {
     return request<StaffUser>("/api/admin/v1/auth/me");
   },
 
+  async updateUsername(newUsername: string): Promise<StaffUser> {
+    return request<StaffUser>("/api/admin/v1/auth/username", {
+      method: "PATCH",
+      body: JSON.stringify({ new_username: newUsername }),
+    });
+  },
+
+  async updatePassword(
+    currentPassword: string,
+    newPassword: string,
+    newPasswordConfirm: string
+  ): Promise<{ status: string; message: string }> {
+    return request<{ status: string; message: string }>("/api/admin/v1/auth/password", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+        new_password_confirm: newPasswordConfirm,
+      }),
+    });
+  },
+
   // --- Dashboard ---
   async getDashboardKPIs(): Promise<DashboardKPIs> {
     return request<DashboardKPIs>("/api/admin/v1/dashboard/kpis");

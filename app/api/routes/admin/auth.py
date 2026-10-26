@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db_session
-from app.api.schemas.admin import StaffLoginRequest, StaffUserResponse
+from app.api.schemas.admin import (
+    StaffLoginRequest,
+    StaffUserResponse,
+    UpdatePasswordRequest,
+    UpdateUsernameRequest,
+)
 from app.config import Settings, get_settings
 from app.logging import get_logger
 from app.models.admin_auth import AdminSession
@@ -143,3 +148,151 @@ async def get_me(
         permissions=permissions,
         csrf_token=admin_session.csrf_token,
     )
+
+
+@router.patch("/username", response_model=StaffUserResponse)
+async def update_username(
+    request: Request,
+    body: UpdateUsernameRequest,
+    auth_data: tuple[User, AdminSession] = Depends(get_current_staff_user),
+    session: AsyncSession = Depends(get_db_session),
+    _: None = Depends(verify_csrf_token),
+) -> StaffUserResponse:
+    """Update current authenticated staff user's login username."""
+    user, admin_session = auth_data
+    cleaned_username = body.new_username.strip()
+
+    from sqlalchemy import select
+
+    from app.models.admin_auth import StaffCredential
+
+    cred_stmt = select(StaffCredential).where(StaffCredential.user_id == user.id)
+    cred = (await session.execute(cred_stmt)).scalar_one_or_none()
+    if not cred:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Staff credentials not found.",
+        )
+
+    old_username = cred.username
+
+    # Uniqueness check (case-insensitive) against other staff credentials
+    dup_stmt = select(StaffCredential).where(
+        StaffCredential.username.ilike(cleaned_username),
+        StaffCredential.user_id != user.id,
+    )
+    existing_dup = (await session.execute(dup_stmt)).scalar_one_or_none()
+    if existing_dup:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bu foydalanuvchi nomi band. Boshqa nom tanlang.",
+        )
+
+    cred.username = cleaned_username
+    user.username = cleaned_username
+
+    # Audit event record
+    client_ip = request.client.host if request.client else None
+    await AdminAuthService.record_audit_event(
+        session,
+        actor_user_id=user.id,
+        action="staff.username_change",
+        entity_type="staff_credential",
+        entity_id=cred.id,
+        metadata={"old_username": old_username, "new_username": cleaned_username},
+        ip_address=client_ip,
+    )
+
+    await session.commit()
+    logger.info("Staff user_id=%d updated username to '%s'", user.id, cleaned_username)
+
+    roles = [r.name for r in user.roles]
+    permissions = sorted(get_staff_permissions(user))
+
+    return StaffUserResponse(
+        id=user.id,
+        username=cred.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        roles=roles,
+        permissions=permissions,
+        csrf_token=admin_session.csrf_token,
+    )
+
+
+@router.post("/password")
+async def update_password(
+    request: Request,
+    response: Response,
+    body: UpdatePasswordRequest,
+    auth_data: tuple[User, AdminSession] = Depends(get_current_staff_user),
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+    _: None = Depends(verify_csrf_token),
+) -> dict[str, str]:
+    """Change staff password, revoke all active sessions, and delete session cookie."""
+    user, _ = auth_data
+    auth_service = AdminAuthService(settings)
+
+    if body.new_password != body.new_password_confirm:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Yangi parollar bir-biriga mos kelmadi.",
+        )
+
+    from sqlalchemy import select, update
+
+    from app.models.admin_auth import AdminSession as AdminSessionModel
+    from app.models.admin_auth import StaffCredential
+
+    cred_stmt = select(StaffCredential).where(StaffCredential.user_id == user.id)
+    cred = (await session.execute(cred_stmt)).scalar_one_or_none()
+    if not cred:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Staff credentials not found.",
+        )
+
+    if not auth_service.verify_password(body.current_password, cred.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Joriy parol noto'g'ri kiritildi.",
+        )
+
+    new_hash = auth_service.hash_password(body.new_password)
+    cred.password_hash = new_hash
+
+    # Revoke ALL active sessions for this user
+    rev_stmt = (
+        update(AdminSessionModel)
+        .where(AdminSessionModel.user_id == user.id)
+        .values(is_revoked=True)
+    )
+    await session.execute(rev_stmt)
+
+    client_ip = request.client.host if request.client else None
+    await AdminAuthService.record_audit_event(
+        session,
+        actor_user_id=user.id,
+        action="staff.password_change",
+        entity_type="staff_credential",
+        entity_id=cred.id,
+        metadata={"revoked_all_sessions": True},
+        ip_address=client_ip,
+    )
+
+    await session.commit()
+    logger.info("Staff user_id=%d changed password; all sessions revoked", user.id)
+
+    response.delete_cookie(
+        key=settings.admin_session_cookie_name,
+        path="/",
+        httponly=True,
+        secure=settings.admin_session_cookie_secure,
+        samesite="lax",
+    )
+
+    return {
+        "status": "ok",
+        "message": "Parol muvaffaqiyatli o'zgartirildi. Iltimos, yangi parol bilan qayta kiring.",
+    }

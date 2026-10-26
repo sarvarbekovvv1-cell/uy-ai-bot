@@ -17,6 +17,20 @@ class StaffLoginRequest(BaseModel):
     password: str = Field(..., min_length=1, max_length=128)
 
 
+class UpdateUsernameRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    new_username: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_.-]+$")
+
+
+class UpdatePasswordRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+    new_password_confirm: str = Field(..., min_length=8, max_length=128)
+
+
 class StaffUserResponse(BaseModel):
     id: int
     username: str
@@ -31,18 +45,24 @@ class StaffUserResponse(BaseModel):
 # Dashboard Schemas
 # -----------------------------------------------------------------------------
 class DashboardMetricsResponse(BaseModel):
-    total_users: int
-    active_properties: int
-    pending_moderation_properties: int
-    active_leads: int
-    new_leads_count: int
-    won_leads: int
-    lost_leads: int
-    total_viewings: int
-    crm_pending_events: int
-    crm_failed_events: int
-    crm_succeeded_events: int
-    ai_broker_enabled: bool
+    total_users: int = 0
+    active_properties: int = 0
+    pending_moderation_properties: int = 0
+    active_leads: int = 0
+    new_leads_count: int = 0
+    won_leads: int = 0
+    lost_leads: int = 0
+    total_viewings: int = 0
+    crm_pending_events: int = 0
+    crm_failed_events: int = 0
+    crm_succeeded_events: int = 0
+    ai_broker_enabled: bool = False
+
+    # Frontend compatibility fields
+    total_properties: int = 0
+    approved_properties: int = 0
+    total_leads: int = 0
+    pending_viewings: int = 0
 
 
 # -----------------------------------------------------------------------------
@@ -63,7 +83,7 @@ class AdminPropertyOwnerInfo(BaseModel):
 
 class AdminPropertyItem(BaseModel):
     id: int
-    title: str
+    title: str | None = None
     property_type: str
     listing_type: str
     status: str

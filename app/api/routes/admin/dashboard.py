@@ -20,6 +20,7 @@ router = APIRouter(prefix="/dashboard", tags=["Admin Dashboard"])
 
 
 @router.get("", response_model=DashboardMetricsResponse)
+@router.get("/kpis", response_model=DashboardMetricsResponse)
 async def get_dashboard_metrics(
     days: int = Query(default=30, ge=1, le=365),
     session: AsyncSession = Depends(get_db_session),
@@ -35,6 +36,10 @@ async def get_dashboard_metrics(
     ).scalar_one() or 0
 
     # 2. Property counts
+    total_props = (
+        await session.execute(select(func.count(Property.id)))
+    ).scalar_one() or 0
+
     active_props = (
         await session.execute(
             select(func.count(Property.id)).where(Property.status == "approved")
@@ -43,11 +48,17 @@ async def get_dashboard_metrics(
 
     pending_props = (
         await session.execute(
-            select(func.count(Property.id)).where(Property.status == "pending_approval")
+            select(func.count(Property.id)).where(
+                Property.status.in_(("submitted", "under_review", "pending_approval"))
+            )
         )
     ).scalar_one() or 0
 
     # 3. Lead counts
+    total_leads = (
+        await session.execute(select(func.count(Lead.id)))
+    ).scalar_one() or 0
+
     active_leads = (
         await session.execute(
             select(func.count(Lead.id)).where(Lead.stage.in_(ACTIVE_LEAD_STAGES))
@@ -71,6 +82,12 @@ async def get_dashboard_metrics(
     # 4. Viewing counts
     total_viewings = (
         await session.execute(select(func.count(ViewingRequest.id)))
+    ).scalar_one() or 0
+
+    pending_viewings = (
+        await session.execute(
+            select(func.count(ViewingRequest.id)).where(ViewingRequest.status == "pending")
+        )
     ).scalar_one() or 0
 
     # 5. CRM Outbox counts
@@ -114,4 +131,8 @@ async def get_dashboard_metrics(
         crm_failed_events=crm_failed,
         crm_succeeded_events=crm_succeeded,
         ai_broker_enabled=settings.ai_broker_enabled,
+        total_properties=total_props,
+        approved_properties=active_props,
+        total_leads=total_leads,
+        pending_viewings=pending_viewings,
     )

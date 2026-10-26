@@ -5,8 +5,12 @@ import type { StaffUser } from "../types";
 interface AuthContextType {
   user: StaffUser | null;
   loading: boolean;
+  notice: string | null;
+  clearNotice: () => void;
   login: (u: string, p: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUsername: (newUsername: string) => Promise<StaffUser>;
+  updatePassword: (curr: string, newPass: string, confirmPass: string) => Promise<void>;
   hasPerm: (perm: string) => boolean;
   hasAnyPerm: (perms: string[]) => boolean;
 }
@@ -16,6 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<StaffUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -45,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const res = await adminApi.login(u, p);
     setUser(res.user);
     setCsrfToken(res.csrf_token);
+    setNotice(null);
   };
 
   const logout = async () => {
@@ -55,6 +61,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCsrfToken(null);
     }
   };
+
+  const updateUsername = async (newUsername: string): Promise<StaffUser> => {
+    const updated = await adminApi.updateUsername(newUsername);
+    setUser(updated);
+    if (updated.csrf_token) {
+      setCsrfToken(updated.csrf_token);
+    }
+    return updated;
+  };
+
+  const updatePassword = async (
+    curr: string,
+    newPass: string,
+    confirmPass: string
+  ): Promise<void> => {
+    const res = await adminApi.updatePassword(curr, newPass, confirmPass);
+    // Revocation resets server session; update client state and redirect to login
+    setUser(null);
+    setCsrfToken(null);
+    setNotice(res.message || "Parol muvaffaqiyatli o'zgartirildi. Yangi parol bilan qayta kiring.");
+  };
+
+  const clearNotice = () => setNotice(null);
 
   const hasPerm = (perm: string): boolean => {
     if (!user) return false;
@@ -67,7 +96,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, hasPerm, hasAnyPerm }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        notice,
+        clearNotice,
+        login,
+        logout,
+        updateUsername,
+        updatePassword,
+        hasPerm,
+        hasAnyPerm,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

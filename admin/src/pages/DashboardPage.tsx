@@ -7,12 +7,18 @@ export const DashboardPage: React.FC<{ onNavigate: (tab: any) => void }> = ({ on
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadKPIs = () => {
+    setLoading(true);
+    setError(null);
     adminApi
       .getDashboardKPIs()
       .then((data) => setKpis(data))
       .catch((err) => setError(err instanceof Error ? err.message : "KPI yuklanmadi"))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadKPIs();
   }, []);
 
   if (loading) {
@@ -20,7 +26,28 @@ export const DashboardPage: React.FC<{ onNavigate: (tab: any) => void }> = ({ on
   }
 
   if (error) {
-    return <div style={{ color: "#ef4444" }}>Xatolik: {error}</div>;
+    return (
+      <div style={{ padding: "20px", backgroundColor: "#1e293b", borderRadius: "8px", border: "1px solid #ef4444" }}>
+        <div style={{ color: "#ef4444", fontWeight: 600, marginBottom: "8px" }}>Xatolik: {error}</div>
+        <p style={{ color: "#94a3b8", fontSize: "0.875rem", marginBottom: "12px" }}>
+          Ko'rsatkichlarni yuklab bo'lmadi. Server bilan aloqa mavjudligini tekshiring.
+        </p>
+        <button
+          onClick={loadKPIs}
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#3b82f6",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "0.875rem",
+            cursor: "pointer",
+          }}
+        >
+          Qayta urinish
+        </button>
+      </div>
+    );
   }
 
   const cards = [

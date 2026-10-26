@@ -199,3 +199,24 @@ async def test_lead_stage_transition_and_notes(
     assert detail["stage"] == "contacted"
     assert len(detail["notes"]) == 1
     assert "telefon orqali" in detail["notes"][0]["note_text"]
+
+
+@pytest.mark.asyncio
+async def test_assign_lead_broker_post_alias(
+    async_client: AsyncClient, setup_leads_context
+) -> None:
+    """Test POST /api/admin/v1/leads/{id}/assign works alongside PATCH."""
+    _head, _broker_a, broker_b, lead_a, _lead_b = setup_leads_context
+
+    login_head = await async_client.post(
+        "/api/admin/v1/auth/login", json={"username": "head_boss", "password": "Password123!"}
+    )
+    csrf_token = login_head.json()["csrf_token"]
+
+    resp_assign = await async_client.post(
+        f"/api/admin/v1/leads/{lead_a.id}/assign",
+        headers={"X-CSRF-Token": csrf_token},
+        json={"broker_user_id": broker_b.id},
+    )
+    assert resp_assign.status_code == 200
+    assert resp_assign.json()["broker_id"] == broker_b.id

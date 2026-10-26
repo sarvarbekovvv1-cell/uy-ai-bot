@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { LeadsPage } from "./pages/LeadsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PropertiesPage } from "./pages/PropertiesPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { ViewingsPage } from "./pages/ViewingsPage";
 
@@ -72,6 +73,8 @@ export const App: React.FC = () => {
         return hasPerm("crm.view") ? <CRMPage /> : <ForbiddenMessage />;
       case "audit":
         return hasPerm("audit.view") ? <AuditPage /> : <ForbiddenMessage />;
+      case "settings":
+        return <SettingsPage />;
       default:
         return <div>Sahifa topilmadi</div>;
     }

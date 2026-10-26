@@ -69,4 +69,48 @@ describe("Admin API Client", () => {
 
     expect(getCsrfToken()).toBeNull();
   });
+
+  it("sends PATCH /api/admin/v1/auth/username with new_username", async () => {
+    setCsrfToken("csrf_token_test");
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: async () => ({ id: 1, username: "new_superadmin", roles: ["superadmin"], permissions: [] }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const res = await adminApi.updateUsername("new_superadmin");
+    expect(res.username).toBe("new_superadmin");
+
+    const [path, init] = mockFetch.mock.calls[0];
+    expect(path).toBe("/api/admin/v1/auth/username");
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body as string)).toEqual({ new_username: "new_superadmin" });
+  });
+
+  it("sends POST /api/admin/v1/auth/password with current and new passwords", async () => {
+    setCsrfToken("csrf_token_pass");
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: async () => ({ status: "ok", message: "Password updated" }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const res = await adminApi.updatePassword("OldPass123!", "NewPass123!", "NewPass123!");
+    expect(res.status).toBe("ok");
+
+    const [path, init] = mockFetch.mock.calls[0];
+    expect(path).toBe("/api/admin/v1/auth/password");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({
+      current_password: "OldPass123!",
+      new_password: "NewPass123!",
+      new_password_confirm: "NewPass123!",
+    });
+  });
 });

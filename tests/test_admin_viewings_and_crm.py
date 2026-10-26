@@ -194,3 +194,28 @@ async def test_audit_log_visibility_and_immutability(
     # Prove immutability: attempting to delete or edit audit trail returns 404/405
     del_resp = await async_client.delete(f"/api/admin/v1/audit/{audit_data['items'][0]['id']}")
     assert del_resp.status_code in (404, 405)
+
+
+@pytest.mark.asyncio
+async def test_crm_outbox_aliases(
+    async_client: AsyncClient, setup_viewings_and_crm_context
+) -> None:
+    """Test /api/admin/v1/crm/outbox and retry aliases for frontend client compatibility."""
+    _staff, _viewing, crm_failed, _crm_succeeded = setup_viewings_and_crm_context
+
+    login_resp = await async_client.post(
+        "/api/admin/v1/auth/login", json={"username": "admin_crm", "password": "Password123!"}
+    )
+    csrf_token = login_resp.json()["csrf_token"]
+
+    # 1. Get /crm/outbox
+    resp_outbox = await async_client.get("/api/admin/v1/crm/outbox")
+    assert resp_outbox.status_code == 200
+    assert resp_outbox.json()["total"] >= 2
+
+    # 2. Post /crm/outbox/{id}/retry
+    resp_retry = await async_client.post(
+        f"/api/admin/v1/crm/outbox/{crm_failed.id}/retry",
+        headers={"X-CSRF-Token": csrf_token},
+    )
+    assert resp_retry.status_code == 200

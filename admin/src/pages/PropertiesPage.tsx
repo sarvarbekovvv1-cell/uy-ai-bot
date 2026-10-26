@@ -10,9 +10,10 @@ export const PropertiesPage: React.FC = () => {
   const [properties, setProperties] = useState<PropertyListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<string>("pending_approval");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<PropertyDetail | null>(null);
 
   // Moderation state
@@ -23,6 +24,7 @@ export const PropertiesPage: React.FC = () => {
 
   const fetchProperties = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await adminApi.listProperties({
         page,
@@ -34,6 +36,7 @@ export const PropertiesPage: React.FC = () => {
       setTotal(res.total);
     } catch (err: unknown) {
       console.error(err);
+      setLoadError(err instanceof Error ? err.message : "E'lonlarni yuklab bo'lmadi");
     } finally {
       setLoading(false);
     }
@@ -147,9 +150,12 @@ export const PropertiesPage: React.FC = () => {
           >
             <option value="">Barchasi</option>
             <option value="pending_approval">Moderatsiyada (Kutilmoqda)</option>
+            <option value="submitted">Yuborilgan (Submitted)</option>
+            <option value="under_review">Ko'rib chiqilmoqda (Under Review)</option>
             <option value="approved">Tasdiqlangan</option>
             <option value="rejected">Rad etilgan</option>
             <option value="archived">Arxivlangan</option>
+            <option value="draft">Qoralama</option>
           </select>
 
           <form onSubmit={handleSearchSubmit} style={{ display: "flex", gap: "6px" }}>
@@ -184,6 +190,39 @@ export const PropertiesPage: React.FC = () => {
           </form>
         </div>
       </div>
+
+      {/* Error banner */}
+      {loadError && (
+        <div
+          style={{
+            padding: "12px 16px",
+            backgroundColor: "rgba(239, 68, 68, 0.15)",
+            border: "1px solid #ef4444",
+            borderRadius: "8px",
+            color: "#fca5a5",
+            marginBottom: "16px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>Xatolik: {loadError}</span>
+          <button
+            onClick={fetchProperties}
+            style={{
+              padding: "4px 10px",
+              backgroundColor: "#ef4444",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "4px",
+              fontSize: "0.8rem",
+              cursor: "pointer",
+            }}
+          >
+            Qayta urinish
+          </button>
+        </div>
+      )}
 
       {/* Properties Table */}
       <div style={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", overflow: "hidden" }}>
@@ -221,13 +260,13 @@ export const PropertiesPage: React.FC = () => {
                 >
                   <td style={{ padding: "12px 16px", color: "#64748b" }}>#{p.id}</td>
                   <td style={{ padding: "12px 16px", fontWeight: 500, color: "#f8fafc" }}>
-                    {p.title || `${p.district} ${p.property_type}`}
+                    {p.title || (p.district ? `${p.district} ${p.property_type}` : `E'lon #${p.id}`)}
                   </td>
-                  <td style={{ padding: "12px 16px", color: "#cbd5e1" }}>{p.district}</td>
-                  <td style={{ padding: "12px 16px", color: "#cbd5e1" }}>{p.rooms}</td>
-                  <td style={{ padding: "12px 16px", color: "#cbd5e1" }}>{p.total_area} m²</td>
+                  <td style={{ padding: "12px 16px", color: "#cbd5e1" }}>{p.district || "—"}</td>
+                  <td style={{ padding: "12px 16px", color: "#cbd5e1" }}>{p.rooms ?? "—"}</td>
+                  <td style={{ padding: "12px 16px", color: "#cbd5e1" }}>{p.total_area ? `${p.total_area} m²` : "—"}</td>
                   <td style={{ padding: "12px 16px", fontWeight: 600, color: "#10b981" }}>
-                    {formatPrice(p.price, p.currency)}
+                    {p.price ? formatPrice(p.price, p.currency) : "—"}
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <span
@@ -239,15 +278,19 @@ export const PropertiesPage: React.FC = () => {
                         backgroundColor:
                           p.status === "approved"
                             ? "rgba(16, 185, 129, 0.2)"
-                            : p.status === "pending_approval"
+                            : p.status === "pending_approval" || p.status === "submitted" || p.status === "under_review"
                             ? "rgba(245, 158, 11, 0.2)"
-                            : "rgba(239, 68, 68, 0.2)",
+                            : p.status === "rejected"
+                            ? "rgba(239, 68, 68, 0.2)"
+                            : "rgba(148, 163, 184, 0.2)",
                         color:
                           p.status === "approved"
                             ? "#34d399"
-                            : p.status === "pending_approval"
+                            : p.status === "pending_approval" || p.status === "submitted" || p.status === "under_review"
                             ? "#fbbf24"
-                            : "#f87171",
+                            : p.status === "rejected"
+                            ? "#f87171"
+                            : "#94a3b8",
                       }}
                     >
                       {p.status}

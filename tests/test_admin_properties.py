@@ -198,3 +198,110 @@ async def test_property_archive(
 
     detail = (await async_client.get(f"/api/admin/v1/properties/{prop1.id}")).json()
     assert detail["status"] == "archived"
+
+
+@pytest.mark.asyncio
+async def test_property_list_with_null_title(
+    async_client: AsyncClient, setup_properties_context, db_session: AsyncSession
+) -> None:
+    """Ensure properties with title=None serialize successfully without Pydantic ValidationError."""
+    _admin, username, password, _prop1, _prop2 = setup_properties_context
+
+    # Create a property with title=None (common when bot draft is created)
+    null_title_prop = Property(
+        owner_user_id=_admin.id,
+        title=None,
+        property_type="apartment",
+        listing_type="sale",
+        region="Toshkent",
+        district="Mirzo Ulugbek",
+        address="Mustaqillik shoh ko'chasi 1",
+        rooms=2,
+        total_area=Decimal("60.0"),
+        condition="renovated",
+        price=Decimal("65000"),
+        currency="USD",
+        status="approved",
+    )
+    db_session.add(null_title_prop)
+    await db_session.flush()
+
+    await async_client.post(
+        "/api/admin/v1/auth/login", json={"username": username, "password": password}
+    )
+
+    resp = await async_client.get("/api/admin/v1/properties")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] >= 3
+    found_null_title = any(
+        item["id"] == null_title_prop.id and item["title"] is None
+        for item in data["items"]
+    )
+    assert found_null_title is True
+
+
+@pytest.mark.asyncio
+async def test_property_list_status_filter_pending_approval(
+    async_client: AsyncClient, setup_properties_context, db_session: AsyncSession
+) -> None:
+    """Ensure status filter 'pending_approval' matches submitted and under_review items."""
+    _admin, username, password, _prop1, _prop2 = setup_properties_context
+
+    submitted_prop = Property(
+        owner_user_id=_admin.id,
+        title="Yangi yuborilgan e'lon",
+        property_type="apartment",
+        listing_type="sale",
+        region="Toshkent",
+        district="Chilonzor",
+        address="Chilonzor 1-mavze 10",
+        rooms=3,
+        total_area=Decimal("80.0"),
+        condition="new",
+        price=Decimal("85000"),
+        currency="USD",
+        status="submitted",
+    )
+    db_session.add(submitted_prop)
+    await db_session.flush()
+
+    await async_client.post(
+        "/api/admin/v1/auth/login", json={"username": username, "password": password}
+    )
+
+    resp = await async_client.get("/api/admin/v1/properties?status=pending_approval")
+    assert resp.status_code == 200
+    data = resp.json()
+    ids = [item["id"] for item in data["items"]]
+    assert submitted_prop.id in ids
+
+
+@pytest.mark.asyncio
+async def test_dashboard_kpis_endpoint(
+    async_client: AsyncClient, setup_properties_context
+) -> None:
+    """Test dashboard KPIs endpoint returns all required metrics for both /kpis and root."""
+    _admin, username, password, _prop1, _prop2 = setup_properties_context
+
+    await async_client.post(
+        "/api/admin/v1/auth/login", json={"username": username, "password": password}
+    )
+
+    resp_kpis = await async_client.get("/api/admin/v1/dashboard/kpis")
+    assert resp_kpis.status_code == 200
+    kpis = resp_kpis.json()
+    assert "total_properties" in kpis
+    assert "approved_properties" in kpis
+    assert "pending_moderation_properties" in kpis
+    assert "total_leads" in kpis
+    assert "active_leads" in kpis
+    assert "won_leads" in kpis
+    assert "pending_viewings" in kpis
+    assert "crm_failed_events" in kpis
+    assert "crm_pending_events" in kpis
+
+    resp_root = await async_client.get("/api/admin/v1/dashboard")
+    assert resp_root.status_code == 200
+    root_data = resp_root.json()
+    assert root_data["total_properties"] == kpis["total_properties"]

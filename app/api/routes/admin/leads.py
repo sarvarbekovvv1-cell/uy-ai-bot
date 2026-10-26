@@ -296,6 +296,7 @@ async def update_lead_stage(
 
 
 @router.patch("/{lead_id}/assign", status_code=status.HTTP_200_OK)
+@router.post("/{lead_id}/assign", status_code=status.HTTP_200_OK)
 async def assign_lead_broker(
     lead_id: int,
     request: Request,
@@ -337,7 +338,12 @@ async def assign_lead_broker(
     )
 
     await session.commit()
-    return {"status": "ok", "lead_id": lead_id, "broker_user_id": updated_lead.broker_user_id}
+    return {
+        "status": "ok",
+        "lead_id": lead_id,
+        "broker_user_id": updated_lead.broker_user_id,
+        "broker_id": updated_lead.broker_user_id,
+    }
 
 
 @router.post("/{lead_id}/notes", status_code=status.HTTP_201_CREATED)

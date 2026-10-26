@@ -9,7 +9,8 @@ export type AdminTab =
   | "brokers"
   | "users"
   | "crm"
-  | "audit";
+  | "audit"
+  | "settings";
 
 interface AdminLayoutProps {
   currentTab: AdminTab;
@@ -29,9 +30,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ currentTab, onSelectTa
     { tab: "users", label: "👤 Foydalanuvchilar", perm: "users.view" },
     { tab: "crm", label: "🔄 amoCRM Outbox", perm: "crm.view" },
     { tab: "audit", label: "🛡 Audit Log", perm: "audit.view" },
+    { tab: "settings", label: "⚙️ Sozlamalar", perm: "" },
   ];
 
-  const visibleNavItems = navItems.filter((item) => hasPerm(item.perm));
+  const visibleNavItems = navItems.filter((item) => !item.perm || hasPerm(item.perm));
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>

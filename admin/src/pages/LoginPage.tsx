@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 
 export const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const { login, notice } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +59,23 @@ export const LoginPage: React.FC = () => {
             Xodimlar va ma'murlar uchun kirish
           </p>
         </div>
+
+        {notice && (
+          <div
+            data-testid="login-notice"
+            style={{
+              padding: "12px",
+              backgroundColor: "rgba(34, 197, 94, 0.15)",
+              border: "1px solid #22c55e",
+              borderRadius: "8px",
+              color: "#86efac",
+              fontSize: "0.875rem",
+              marginBottom: "20px",
+            }}
+          >
+            {notice}
+          </div>
+        )}
 
         {error && (
           <div

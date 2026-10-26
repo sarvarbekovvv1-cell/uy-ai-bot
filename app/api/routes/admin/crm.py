@@ -44,6 +44,7 @@ def sanitize_crm_error(err: str | None) -> str | None:
 
 
 @router.get("/events", response_model=PaginatedResponse)
+@router.get("/outbox", response_model=PaginatedResponse)
 async def list_crm_events(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -95,6 +96,7 @@ async def list_crm_events(
 
 
 @router.post("/events/{event_id}/retry", status_code=status.HTTP_200_OK)
+@router.post("/outbox/{event_id}/retry", status_code=status.HTTP_200_OK)
 async def retry_crm_event(
     event_id: int,
     request: Request,

@@ -109,3 +109,24 @@ async def test_role_change_and_last_superadmin_protection(
     )
     assert demote_resp.status_code == 400
     assert "last remaining superadmin" in demote_resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_update_user_roles_put_method_alias(
+    async_client: AsyncClient, setup_users_context
+) -> None:
+    """Test PUT /api/admin/v1/users/{id}/roles works identically to PATCH."""
+    _admin, username, password, customer = setup_users_context
+
+    login_resp = await async_client.post(
+        "/api/admin/v1/auth/login", json={"username": username, "password": password}
+    )
+    csrf_token = login_resp.json()["csrf_token"]
+
+    put_resp = await async_client.put(
+        f"/api/admin/v1/users/{customer.id}/roles",
+        headers={"X-CSRF-Token": csrf_token},
+        json={"roles": ["sales_broker", "buyer"]},
+    )
+    assert put_resp.status_code == 200
+    assert set(put_resp.json()["roles"]) == {"sales_broker", "buyer"}
