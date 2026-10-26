@@ -7,10 +7,14 @@ import type {
   BrokerWorkloadItem,
   CRMOutboxEventItem,
   DashboardKPIs,
+  KaizenCycleItem,
+  KaizenOverview,
+  KaizenRecommendationItem,
   LeadDetail,
   LeadItem,
   LoginResponse,
   PaginatedResponse,
+  PropertyCreateInput,
   PropertyDetail,
   PropertyListItem,
   StaffUser,
@@ -330,5 +334,175 @@ export const adminApi = {
     if (params.page_size) q.set("page_size", String(params.page_size));
     if (params.action) q.set("action", params.action);
     return request<PaginatedResponse<AuditEventItem>>(`/api/admin/v1/audit?${q.toString()}`);
+  },
+
+  // --- Property Creation (Phase 12) ---
+  async uploadPropertyMedia(
+    file: File
+  ): Promise<{ media_unique_id: string; file_type: string; safe_url: string }> {
+    return request<{ media_unique_id: string; file_type: string; safe_url: string }>(
+      "/api/admin/v1/properties/upload-media",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": file.type || "image/jpeg",
+        },
+        body: file,
+      }
+    );
+  },
+
+  async createProperty(data: PropertyCreateInput): Promise<PropertyDetail> {
+    return request<PropertyDetail>("/api/admin/v1/properties", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // --- Kaizen / PDCA (Phase 12) ---
+  async getKaizenOverview(params: {
+    days?: number;
+    date_from?: string;
+    date_to?: string;
+  } = {}): Promise<KaizenOverview> {
+    const q = new URLSearchParams();
+    if (params.days) q.set("days", String(params.days));
+    if (params.date_from) q.set("date_from", params.date_from);
+    if (params.date_to) q.set("date_to", params.date_to);
+    return request<KaizenOverview>(`/api/admin/v1/kaizen/overview?${q.toString()}`);
+  },
+
+  async listKaizenCycles(params: {
+    status?: string;
+    metric_key?: string;
+    page?: number;
+    page_size?: number;
+  } = {}): Promise<PaginatedResponse<KaizenCycleItem>> {
+    const q = new URLSearchParams();
+    if (params.status) q.set("status", params.status);
+    if (params.metric_key) q.set("metric_key", params.metric_key);
+    if (params.page) q.set("page", String(params.page));
+    if (params.page_size) q.set("page_size", String(params.page_size));
+    return request<PaginatedResponse<KaizenCycleItem>>(`/api/admin/v1/kaizen/cycles?${q.toString()}`);
+  },
+
+  async getKaizenCycle(id: number): Promise<KaizenCycleItem> {
+    return request<KaizenCycleItem>(`/api/admin/v1/kaizen/cycles/${id}`);
+  },
+
+  async createKaizenCycle(data: {
+    title: string;
+    metric_key: string;
+    target_value?: number;
+    description?: string;
+    date_from?: string;
+    date_to?: string;
+    plan_text?: string;
+    recommendation_id?: number;
+  }): Promise<KaizenCycleItem> {
+    return request<KaizenCycleItem>("/api/admin/v1/kaizen/cycles", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async planKaizenCycle(
+    id: number,
+    data: {
+      plan_text: string;
+      target_value?: number;
+      date_from?: string;
+      date_to?: string;
+    }
+  ): Promise<KaizenCycleItem> {
+    return request<KaizenCycleItem>(`/api/admin/v1/kaizen/cycles/${id}/plan`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async startKaizenCycle(id: number, do_text?: string): Promise<KaizenCycleItem> {
+    return request<KaizenCycleItem>(`/api/admin/v1/kaizen/cycles/${id}/start`, {
+      method: "POST",
+      body: JSON.stringify({ do_text }),
+    });
+  },
+
+  async checkKaizenCycle(
+    id: number,
+    check_text?: string
+  ): Promise<{
+    cycle: KaizenCycleItem;
+    delta: number | null;
+    progress_towards_target_pct: number | null;
+    snapshot: Record<string, unknown>;
+  }> {
+    return request<{
+      cycle: KaizenCycleItem;
+      delta: number | null;
+      progress_towards_target_pct: number | null;
+      snapshot: Record<string, unknown>;
+    }>(`/api/admin/v1/kaizen/cycles/${id}/check`, {
+      method: "POST",
+      body: JSON.stringify({ check_text }),
+    });
+  },
+
+  async completeKaizenCycle(
+    id: number,
+    outcome: "successful" | "partially_successful" | "unsuccessful",
+    act_text?: string
+  ): Promise<KaizenCycleItem> {
+    return request<KaizenCycleItem>(`/api/admin/v1/kaizen/cycles/${id}/complete`, {
+      method: "POST",
+      body: JSON.stringify({ outcome, act_text }),
+    });
+  },
+
+  async cancelKaizenCycle(id: number, reason?: string): Promise<KaizenCycleItem> {
+    return request<KaizenCycleItem>(`/api/admin/v1/kaizen/cycles/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  async listKaizenRecommendations(params: {
+    status?: string;
+    category?: string;
+    page?: number;
+    page_size?: number;
+  } = {}): Promise<PaginatedResponse<KaizenRecommendationItem>> {
+    const q = new URLSearchParams();
+    if (params.status) q.set("status", params.status);
+    if (params.category) q.set("category", params.category);
+    if (params.page) q.set("page", String(params.page));
+    if (params.page_size) q.set("page_size", String(params.page_size));
+    return request<PaginatedResponse<KaizenRecommendationItem>>(
+      `/api/admin/v1/kaizen/recommendations?${q.toString()}`
+    );
+  },
+
+  async generateKaizenRecommendations(params: {
+    date_from?: string;
+    date_to?: string;
+    use_ai?: boolean;
+  } = {}): Promise<KaizenRecommendationItem[]> {
+    return request<KaizenRecommendationItem[]>("/api/admin/v1/kaizen/recommendations/generate", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  },
+
+  async reviewKaizenRecommendation(
+    id: number,
+    action: "accept" | "dismiss"
+  ): Promise<KaizenRecommendationItem> {
+    return request<KaizenRecommendationItem>(
+      `/api/admin/v1/kaizen/recommendations/${id}/review`,
+      {
+        method: "POST",
+        body: JSON.stringify({ action }),
+      }
+    );
   },
 };

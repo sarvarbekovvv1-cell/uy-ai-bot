@@ -117,9 +117,7 @@ class GeminiLLMProvider(LLMProvider):
                     data = json.loads(cleaned_json)
                     return AIBrokerIntent.model_validate(data)
                 except (json.JSONDecodeError, ValidationError) as val_err:
-                    logger.warning(
-                        "Gemini returned invalid structured output: %s", str(val_err)
-                    )
+                    logger.warning("Gemini returned invalid structured output: %s", str(val_err))
                     raise AIBrokerValidationError(
                         f"Failed to validate Gemini intent response: {val_err}"
                     ) from val_err

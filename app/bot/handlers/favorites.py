@@ -1,8 +1,11 @@
 """Telegram handlers for saved favorite properties."""
 
+import os
+from typing import Any
+
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import (
@@ -20,6 +23,9 @@ from app.services.user_service import UserService
 
 logger = get_logger(__name__)
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+MEDIA_CACHE_DIR = os.path.join(BASE_DIR, ".cache", "media")
+
 favorites_router = Router(name="favorites")
 
 FAVORITES_BUTTONS = {
@@ -27,6 +33,21 @@ FAVORITES_BUTTONS = {
     for locale_dict in LOCALES.values()
     if locale_dict.get("btn_favorites")
 }
+
+
+def resolve_property_photo(photo_item: Any) -> Any:
+    """Resolve photo item into either Telegram file_id or local FSInputFile."""
+    if not photo_item:
+        return None
+    file_id = getattr(photo_item, "telegram_file_id", None)
+    if file_id and file_id.startswith("admin_file_"):
+        uid = getattr(photo_item, "telegram_file_unique_id", None)
+        if uid:
+            for ext in (".jpg", ".png", ".webp"):
+                candidate = os.path.join(MEDIA_CACHE_DIR, f"{uid}{ext}")
+                if os.path.exists(candidate):
+                    return FSInputFile(candidate)
+    return file_id
 
 
 def format_card_caption(prop: Property, _lang: str = "uz") -> str:
@@ -104,12 +125,14 @@ async def handle_list_favorites(
         if p.media and len(p.media) > 0 and message.bot:
             try:
                 first_photo = p.media[0]
-                await message.answer_photo(
-                    photo=first_photo.telegram_file_id,
-                    caption=caption,
-                    reply_markup=card_kb,
-                )
-                continue
+                photo_payload = resolve_property_photo(first_photo)
+                if photo_payload:
+                    await message.answer_photo(
+                        photo=photo_payload,
+                        caption=caption,
+                        reply_markup=card_kb,
+                    )
+                    continue
             except Exception:
                 logger.warning(
                     "Failed to send property photo, falling back to text for id=%s",

@@ -149,9 +149,7 @@ async def test_currency_isolation(db_session: AsyncSession) -> None:
 
     await create_db_property(db_session, owner.id, currency="USD", price=Decimal("80000"))
     await create_db_property(db_session, owner.id, currency="USD", price=Decimal("85000"))
-    await create_db_property(
-        db_session, owner.id, currency="UZS", price=Decimal("1000000000")
-    )
+    await create_db_property(db_session, owner.id, currency="UZS", price=Decimal("1000000000"))
 
     service = ComparablePropertyService()
     inp_usd = PropertyValuationInput(

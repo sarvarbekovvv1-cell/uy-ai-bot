@@ -5,6 +5,7 @@ import { AuditPage } from "./pages/AuditPage";
 import { BrokersPage } from "./pages/BrokersPage";
 import { CRMPage } from "./pages/CRMPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { KaizenPage } from "./pages/KaizenPage";
 import { LeadsPage } from "./pages/LeadsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PropertiesPage } from "./pages/PropertiesPage";
@@ -71,6 +72,8 @@ export const App: React.FC = () => {
         return hasPerm("users.view") ? <UsersPage /> : <ForbiddenMessage />;
       case "crm":
         return hasPerm("crm.view") ? <CRMPage /> : <ForbiddenMessage />;
+      case "kaizen":
+        return hasPerm("kaizen.view") ? <KaizenPage /> : <ForbiddenMessage />;
       case "audit":
         return hasPerm("audit.view") ? <AuditPage /> : <ForbiddenMessage />;
       case "settings":

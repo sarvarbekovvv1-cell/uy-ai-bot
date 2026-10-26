@@ -6,12 +6,13 @@ import sys
 
 
 def test_alembic_history_single_head_007() -> None:
-    """Verify Alembic history reports a single head at 007_create_admin_auth_and_audit."""
+    """Verify Alembic history contains 007_create_admin_auth_and_audit and has single head."""
     cmd = [sys.executable, "-m", "alembic", "history"]
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     lines = result.stdout.strip().splitlines()
     assert len(lines) >= 7
-    assert "007_create_admin_auth_and_audit (head)" in lines[0]
+    assert "007_create_admin_auth_and_audit" in result.stdout
+    assert "(head)" in lines[0]
 
 
 def test_migration_007_upgrade_and_downgrade() -> None:

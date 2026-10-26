@@ -36,14 +36,10 @@ async def get_dashboard_metrics(
     ).scalar_one() or 0
 
     # 2. Property counts
-    total_props = (
-        await session.execute(select(func.count(Property.id)))
-    ).scalar_one() or 0
+    total_props = (await session.execute(select(func.count(Property.id)))).scalar_one() or 0
 
     active_props = (
-        await session.execute(
-            select(func.count(Property.id)).where(Property.status == "approved")
-        )
+        await session.execute(select(func.count(Property.id)).where(Property.status == "approved"))
     ).scalar_one() or 0
 
     pending_props = (
@@ -55,20 +51,14 @@ async def get_dashboard_metrics(
     ).scalar_one() or 0
 
     # 3. Lead counts
-    total_leads = (
-        await session.execute(select(func.count(Lead.id)))
-    ).scalar_one() or 0
+    total_leads = (await session.execute(select(func.count(Lead.id)))).scalar_one() or 0
 
     active_leads = (
-        await session.execute(
-            select(func.count(Lead.id)).where(Lead.stage.in_(ACTIVE_LEAD_STAGES))
-        )
+        await session.execute(select(func.count(Lead.id)).where(Lead.stage.in_(ACTIVE_LEAD_STAGES)))
     ).scalar_one() or 0
 
     new_leads = (
-        await session.execute(
-            select(func.count(Lead.id)).where(Lead.created_at >= cutoff)
-        )
+        await session.execute(select(func.count(Lead.id)).where(Lead.created_at >= cutoff))
     ).scalar_one() or 0
 
     won_leads = (

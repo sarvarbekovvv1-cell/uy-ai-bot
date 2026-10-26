@@ -86,12 +86,26 @@ npm run build
 
 ---
 
+## Kaizen / PDCA Intelligence System & Admin Property Creation (Phase 12)
+
+UyAI includes a continuous operational improvement system (**Kaizen / PDCA**) and **unified property creation from the Admin Panel**.
+
+### Key Capabilities
+- **Deterministic KPI Engine**: Calculates real-time lead funnel conversion rates, first-contact response times (mean, median, p90), viewing completion/cancellation rates, property moderation queues, and amoCRM outbox reliability without hallucination or metric fabrication.
+- **PDCA Cycle Lifecycle**: Full state machine management (`draft` -> `planned` -> `active` -> `checking` -> `completed` / `cancelled`) with automatic baseline KPI snapshots, delta/progress tracking, and immutable audit logs.
+- **Kaizen Recommendations Engine**: Rule-based heuristics combined with optional Gemini AI insights providing structured, explainable management suggestions with accept/dismiss actions.
+- **Admin Property Creation**: Single source of truth listing creation reusing canonical `Property`, `PropertyMedia`, and `PropertyService` domain models, supporting multi-image upload with magic-byte validation and auto-approval permissions.
+
+For detailed documentation, see [KAIZEN_PDCA.md](file:///Users/a0000/Desktop/uy%20ai%20bot/docs/KAIZEN_PDCA.md).
+
+---
+
 ## Current Development Phase
 
-> **Current Phase: Phase 11 — Admin / Manager Panel**
+> **Current Phase: Phase 12 — Kaizen / PDCA Intelligence System + Admin Property Creation**
 >
-> **Notice:** Dedicated Staff Admin / Manager Web application and backend APIs implemented with scrypt authentication, CSRF protection, granular RBAC, property moderation, lead management with horizontal broker isolation, viewing lifecycle controls, CRM outbox monitoring/retry, and immutable audit logging.
-> Phase 12 (Kaizen / PDCA / AI management recommendations) and Phase 13 (final deployment) are intentionally NOT started in this phase.
+> **Notice:** Kaizen continuous operational improvement engine, deterministic KPI analytics, PDCA lifecycle management, Gemini AI management recommendations, and unified Admin property creation implemented and verified.
+> Phase 13 (final deployment & production hardening) is intentionally NOT started in this phase.
 
 
 ---

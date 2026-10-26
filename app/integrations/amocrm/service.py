@@ -392,9 +392,7 @@ class AmoCRMService:
                 event.attempt_count += 1
                 safe_msg = f"{type(temp_err).__name__}: {str(temp_err)[:150]}"
 
-                is_permanent = isinstance(
-                    temp_err, (AmoCRMPermanentError, AmoCRMValidationError)
-                )
+                is_permanent = isinstance(temp_err, (AmoCRMPermanentError, AmoCRMValidationError))
                 if event.attempt_count >= max_retries or is_permanent:
                     event.status = STATUS_FAILED
                     event.last_error_safe = f"PERMANENT_FAILURE: {safe_msg}"

@@ -24,9 +24,7 @@ MAP_BUTTON_TEXTS: set[str] = {
 MAP_BUTTON_TEXTS.update({"📍 Xaritadan uy qidirish", "📍 Поиск по карте"})
 
 
-@miniapp_router.message(
-    F.text.in_(MAP_BUTTON_TEXTS) | F.text.in_({"/map", "/app", "/miniapp"})
-)
+@miniapp_router.message(F.text.in_(MAP_BUTTON_TEXTS) | F.text.in_({"/map", "/app", "/miniapp"}))
 async def handle_miniapp_button(
     message: Message,
     session: AsyncSession,

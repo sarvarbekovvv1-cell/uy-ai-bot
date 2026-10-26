@@ -386,10 +386,10 @@ async def test_demote_staff_revokes_all_active_sessions(
 
     # Verify head broker's active sessions are marked revoked in database
     sessions = (
-        await db_session.execute(
-            select(AdminSession).where(AdminSession.user_id == head_user.id)
-        )
-    ).scalars().all()
+        (await db_session.execute(select(AdminSession).where(AdminSession.user_id == head_user.id)))
+        .scalars()
+        .all()
+    )
     assert len(sessions) > 0
     assert all(s.is_revoked is True for s in sessions)
 
@@ -475,13 +475,17 @@ async def test_assign_broker_domain_and_listing_type_validation(
 
     # Check that LeadEvent(event_type="assigned") was recorded
     events = (
-        await db_session.execute(
-            select(LeadEvent).where(
-                LeadEvent.lead_id == lead.id,
-                LeadEvent.event_type == "assigned",
+        (
+            await db_session.execute(
+                select(LeadEvent).where(
+                    LeadEvent.lead_id == lead.id,
+                    LeadEvent.event_type == "assigned",
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     assert events[0].new_value == str(rental_broker.id)
 
@@ -533,9 +537,7 @@ async def test_audit_event_metadata_sanitization(adversarial_context, db_session
 
     # Re-fetch event
     saved_event = (
-        await db_session.execute(
-            select(AdminAuditEvent).where(AdminAuditEvent.id == event.id)
-        )
+        await db_session.execute(select(AdminAuditEvent).where(AdminAuditEvent.id == event.id))
     ).scalar_one()
 
     raw_json = saved_event.safe_metadata_json or ""

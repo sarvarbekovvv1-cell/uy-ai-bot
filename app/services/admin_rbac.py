@@ -34,10 +34,15 @@ PERM_CRM_VIEW = "crm.view"
 PERM_CRM_RETRY = "crm.retry"
 PERM_AI_VIEW_METRICS = "ai.view_safe_metrics"
 PERM_AUDIT_VIEW = "audit.view"
+PERM_PROPERTIES_CREATE = "properties.create"
+PERM_KAIZEN_VIEW = "kaizen.view"
+PERM_KAIZEN_MANAGE = "kaizen.manage"
+PERM_KAIZEN_GENERATE = "kaizen.generate"
 
 ALL_PERMISSIONS = {
     PERM_DASHBOARD_VIEW,
     PERM_PROPERTIES_VIEW,
+    PERM_PROPERTIES_CREATE,
     PERM_PROPERTIES_MODERATE,
     PERM_PROPERTIES_ARCHIVE,
     PERM_USERS_VIEW,
@@ -54,6 +59,9 @@ ALL_PERMISSIONS = {
     PERM_CRM_RETRY,
     PERM_AI_VIEW_METRICS,
     PERM_AUDIT_VIEW,
+    PERM_KAIZEN_VIEW,
+    PERM_KAIZEN_MANAGE,
+    PERM_KAIZEN_GENERATE,
 }
 
 # Role to Permissions Mapping (Default Deny: unknown role -> empty set)
@@ -62,6 +70,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
     "head_broker": {
         PERM_DASHBOARD_VIEW,
         PERM_PROPERTIES_VIEW,
+        PERM_PROPERTIES_CREATE,
         PERM_PROPERTIES_MODERATE,
         PERM_PROPERTIES_ARCHIVE,
         PERM_USERS_VIEW,
@@ -74,12 +83,17 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         PERM_VIEWINGS_VIEW,
         PERM_VIEWINGS_MANAGE,
         PERM_CRM_VIEW,
+        PERM_CRM_RETRY,
         PERM_AI_VIEW_METRICS,
         PERM_AUDIT_VIEW,
+        PERM_KAIZEN_VIEW,
+        PERM_KAIZEN_MANAGE,
+        PERM_KAIZEN_GENERATE,
     },
     "sales_broker": {
         PERM_DASHBOARD_VIEW,
         PERM_PROPERTIES_VIEW,
+        PERM_PROPERTIES_CREATE,
         PERM_LEADS_VIEW,
         PERM_LEADS_CHANGE_STAGE,
         PERM_LEADS_ADD_NOTE,
@@ -89,6 +103,7 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
     "rental_broker": {
         PERM_DASHBOARD_VIEW,
         PERM_PROPERTIES_VIEW,
+        PERM_PROPERTIES_CREATE,
         PERM_LEADS_VIEW,
         PERM_LEADS_CHANGE_STAGE,
         PERM_LEADS_ADD_NOTE,
@@ -214,9 +229,7 @@ def require_permission(permission: str) -> Callable:
     ) -> User:
         user, _session = auth_data
         if not has_permission(user, permission):
-            logger.warning(
-                "Permission denied: user id=%d lacks '%s'", user.id, permission
-            )
+            logger.warning("Permission denied: user id=%d lacks '%s'", user.id, permission)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permission denied: Requires '{permission}'.",

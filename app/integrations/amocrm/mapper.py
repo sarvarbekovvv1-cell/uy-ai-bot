@@ -6,7 +6,6 @@ Enforces strict data minimization, canonical phone normalization, and PII protec
 - Uses deterministic human-readable lead names without customer phone numbers.
 """
 
-
 from app.config import Settings
 from app.integrations.amocrm.constants import (
     DEFAULT_STAGE_TO_STATUS,

@@ -179,9 +179,7 @@ class AdminAuthService:
             raise ValueError("Invalid username or password.")
 
         if cred.is_locked:
-            raise ValueError(
-                "Account is locked due to excessive failed login attempts."
-            )
+            raise ValueError("Account is locked due to excessive failed login attempts.")
 
         user = cred.user
         if not user or not user.is_active:
@@ -266,9 +264,7 @@ class AdminAuthService:
 
         stmt = (
             select(AdminSession)
-            .options(
-                selectinload(AdminSession.user).selectinload(User.roles)
-            )
+            .options(selectinload(AdminSession.user).selectinload(User.roles))
             .where(
                 AdminSession.session_token_hash == token_hash,
                 AdminSession.is_revoked.is_(False),

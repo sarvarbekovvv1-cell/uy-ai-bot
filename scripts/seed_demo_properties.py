@@ -40,8 +40,7 @@ DEMO_PROPERTIES = [
         "listing_type": "sale",
         "property_type": "apartment",
         "description": (
-            "Yunusobod 4-mavzeda joylashgan, metroga 5 daqiqalik yo‘l. "
-            "Maktab va bog‘cha yaqin."
+            "Yunusobod 4-mavzeda joylashgan, metroga 5 daqiqalik yo‘l. Maktab va bog‘cha yaqin."
         ),
         "region": "Toshkent shahri",
         "district": "Yunusobod",

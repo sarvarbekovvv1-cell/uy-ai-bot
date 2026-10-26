@@ -113,8 +113,7 @@ async def retry_crm_event(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"Cannot retry event in '{event.status}' state. "
-                "Only failed events can be retried."
+                f"Cannot retry event in '{event.status}' state. Only failed events can be retried."
             ),
         )
 

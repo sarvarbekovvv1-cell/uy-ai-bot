@@ -587,6 +587,7 @@ def get_viewing_time_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
     )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+
 def get_viewing_confirm_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
     """Build confirmation inline keyboard for submitting viewing request."""
     return InlineKeyboardMarkup(
@@ -702,6 +703,7 @@ def get_broker_request_card_keyboard(
         )
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
 
 def get_broker_outcome_keyboard(request_id: int, lang: str = "uz") -> InlineKeyboardMarkup:
     """Build outcome selection keyboard for completing a viewing."""
@@ -819,6 +821,7 @@ def get_broker_leads_list_keyboard(
     )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+
 def get_lead_card_keyboard(
     lead_id: int,
     stage: str,
@@ -883,6 +886,7 @@ def get_lead_card_keyboard(
         ]
     )
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
 
 def get_lead_stage_choice_keyboard(lead_id: int, lang: str = "uz") -> InlineKeyboardMarkup:
     """Build keyboard for choosing next stage."""
@@ -1167,6 +1171,7 @@ def get_valuation_districts_keyboard(lang: str = "uz") -> InlineKeyboardMarkup: 
             ]
         )
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
 
 def get_valuation_rooms_keyboard() -> InlineKeyboardMarkup:
     """Build inline keyboard for room counts."""

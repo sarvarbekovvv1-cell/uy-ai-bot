@@ -105,8 +105,7 @@ async def get_current_miniapp_user(
                 "error": {
                     "code": "AUTH_EXPIRED",
                     "message": (
-                        "Telegram authentication session has expired. "
-                        "Please reopen the Mini App."
+                        "Telegram authentication session has expired. Please reopen the Mini App."
                     ),
                 }
             },

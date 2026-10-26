@@ -32,13 +32,13 @@ IQR_MULTIPLIER: Decimal = Decimal("1.5")
 
 # Conservative condition adjustments relative to median
 CONDITION_ADJUSTMENTS: dict[str, Decimal] = {
-    "new": Decimal("0.04"),             # +4%
-    "renovated": Decimal("0.03"),       # +3%
+    "new": Decimal("0.04"),  # +4%
+    "renovated": Decimal("0.03"),  # +3%
     "needs_renovation": Decimal("-0.05"),  # -5%
-    "shell": Decimal("-0.08"),          # -8%
+    "shell": Decimal("-0.08"),  # -8%
 }
 
 # Range spreads around central estimate based on confidence
-RANGE_PERCENT_HIGH: Decimal = Decimal("0.06")     # ±6%
-RANGE_PERCENT_MEDIUM: Decimal = Decimal("0.10")   # ±10%
-RANGE_PERCENT_LOW: Decimal = Decimal("0.15")      # ±15%
+RANGE_PERCENT_HIGH: Decimal = Decimal("0.06")  # ±6%
+RANGE_PERCENT_MEDIUM: Decimal = Decimal("0.10")  # ±10%
+RANGE_PERCENT_LOW: Decimal = Decimal("0.15")  # ±15%

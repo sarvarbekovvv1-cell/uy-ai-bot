@@ -179,9 +179,7 @@ async def test_property_approval_and_rejection_lifecycle(
 
 
 @pytest.mark.asyncio
-async def test_property_archive(
-    async_client: AsyncClient, setup_properties_context
-) -> None:
+async def test_property_archive(async_client: AsyncClient, setup_properties_context) -> None:
     """Test archiving a property."""
     _admin, username, password, prop1, _prop2 = setup_properties_context
 
@@ -235,8 +233,7 @@ async def test_property_list_with_null_title(
     data = resp.json()
     assert data["total"] >= 3
     found_null_title = any(
-        item["id"] == null_title_prop.id and item["title"] is None
-        for item in data["items"]
+        item["id"] == null_title_prop.id and item["title"] is None for item in data["items"]
     )
     assert found_null_title is True
 
@@ -278,9 +275,7 @@ async def test_property_list_status_filter_pending_approval(
 
 
 @pytest.mark.asyncio
-async def test_dashboard_kpis_endpoint(
-    async_client: AsyncClient, setup_properties_context
-) -> None:
+async def test_dashboard_kpis_endpoint(async_client: AsyncClient, setup_properties_context) -> None:
     """Test dashboard KPIs endpoint returns all required metrics for both /kpis and root."""
     _admin, username, password, _prop1, _prop2 = setup_properties_context
 

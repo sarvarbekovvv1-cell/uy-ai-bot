@@ -68,9 +68,7 @@ class ComparablePropertyService:
         # Tier 1: Exact district, narrow room & area tolerance
         tier1_conditions = list(base_conditions)
         if subject.region:
-            tier1_conditions.append(
-                func.lower(Property.region) == subject.region.strip().lower()
-            )
+            tier1_conditions.append(func.lower(Property.region) == subject.region.strip().lower())
         tier1_conditions.append(func.lower(Property.district) == subject.district.strip().lower())
 
         min_r1 = max(1, subject.rooms - TIER1_ROOM_TOLERANCE)
@@ -97,9 +95,7 @@ class ComparablePropertyService:
         # Tier 2: Same district, wider room & area tolerance
         tier2_conditions = list(base_conditions)
         if subject.region:
-            tier2_conditions.append(
-                func.lower(Property.region) == subject.region.strip().lower()
-            )
+            tier2_conditions.append(func.lower(Property.region) == subject.region.strip().lower())
         tier2_conditions.append(func.lower(Property.district) == subject.district.strip().lower())
 
         min_r2 = max(1, subject.rooms - TIER2_ROOM_TOLERANCE)
@@ -126,9 +122,7 @@ class ComparablePropertyService:
         # Tier 3: Same region, broader room & area tolerance
         tier3_conditions = list(base_conditions)
         if subject.region:
-            tier3_conditions.append(
-                func.lower(Property.region) == subject.region.strip().lower()
-            )
+            tier3_conditions.append(func.lower(Property.region) == subject.region.strip().lower())
 
         min_r3 = max(1, subject.rooms - TIER3_ROOM_TOLERANCE)
         max_r3 = subject.rooms + TIER3_ROOM_TOLERANCE

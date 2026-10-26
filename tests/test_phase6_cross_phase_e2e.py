@@ -440,8 +440,7 @@ async def test_lead_details_privacy_and_id_masking(
     tamper_calls = [
         c
         for c in mock_bot_tamper.mock_calls
-        if "AnswerCallbackQuery" in str(c)
-        and "vakolati yo‘q" in str(c)
+        if "AnswerCallbackQuery" in str(c) and "vakolati yo‘q" in str(c)
     ]
     assert len(tamper_calls) > 0
 
@@ -632,9 +631,7 @@ async def test_history_and_statistics_isolation(
     dp = create_dispatcher()
     mock_bot = AsyncMock(spec=Bot)
 
-    update_hist = make_callback_update(
-        sales_broker_tg_id, f"lead_act:history:{sale_lead.id}", 401
-    )
+    update_hist = make_callback_update(sales_broker_tg_id, f"lead_act:history:{sale_lead.id}", 401)
     await dp.feed_update(mock_bot, update_hist, session=db_session)
     sent_texts = extract_sent_texts(mock_bot)
     hist_text = " ".join(sent_texts)
@@ -825,9 +822,7 @@ async def test_no_customer_crm_spam(
     mock_bot = AsyncMock(spec=Bot)
 
     # 1. Change stage
-    update_stage = make_callback_update(
-        broker_tg_id, f"lead_setstage:{lead.id}:contacted", 501
-    )
+    update_stage = make_callback_update(broker_tg_id, f"lead_setstage:{lead.id}:contacted", 501)
     await dp.feed_update(mock_bot, update_stage, session=db_session)
 
     # 2. Add note

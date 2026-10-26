@@ -243,9 +243,7 @@ class LeadService:
             property_id=property_id,
         )
         if existing:
-            await self._enqueue_crm_event(
-                session, event_type="lead_created", lead_id=existing.id
-            )
+            await self._enqueue_crm_event(session, event_type="lead_created", lead_id=existing.id)
             return existing
 
         now = datetime.now(UTC)

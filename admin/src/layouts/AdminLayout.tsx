@@ -9,6 +9,7 @@ export type AdminTab =
   | "brokers"
   | "users"
   | "crm"
+  | "kaizen"
   | "audit"
   | "settings";
 
@@ -29,6 +30,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ currentTab, onSelectTa
     { tab: "brokers", label: "👥 Brokerlar", perm: "leads.assign" },
     { tab: "users", label: "👤 Foydalanuvchilar", perm: "users.view" },
     { tab: "crm", label: "🔄 amoCRM Outbox", perm: "crm.view" },
+    { tab: "kaizen", label: "📈 Kaizen / PDCA", perm: "kaizen.view" },
     { tab: "audit", label: "🛡 Audit Log", perm: "audit.view" },
     { tab: "settings", label: "⚙️ Sozlamalar", perm: "" },
   ];

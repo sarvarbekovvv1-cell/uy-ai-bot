@@ -213,6 +213,7 @@ async def list_properties(
         )
 
     import math
+
     total_pages = math.ceil(total_count / page_size) if total_count > 0 else 1
 
     return MiniAppPropertyListResponse(
@@ -324,9 +325,7 @@ async def get_property_media(
             },
         )
 
-    safe_uid = re.sub(
-        r"[^a-zA-Z0-9_-]", "", media.telegram_file_unique_id or f"media_{media.id}"
-    )
+    safe_uid = re.sub(r"[^a-zA-Z0-9_-]", "", media.telegram_file_unique_id or f"media_{media.id}")
     cache_path = os.path.abspath(os.path.join(MEDIA_CACHE_DIR, f"{safe_uid}.jpg"))
     if not cache_path.startswith(os.path.abspath(MEDIA_CACHE_DIR)):
         raise HTTPException(
@@ -360,7 +359,9 @@ async def get_property_media(
                 file_info = res.json().get("result", {})
                 file_path = file_info.get("file_path")
                 if file_path:
-                    download_url = f"https://api.telegram.org/file/bot{settings.bot_token}/{file_path}"
+                    download_url = (
+                        f"https://api.telegram.org/file/bot{settings.bot_token}/{file_path}"
+                    )
                     img_res = await client.get(download_url)
                     if img_res.status_code == 200:
                         img_bytes = img_res.content
@@ -378,6 +379,42 @@ async def get_property_media(
         content=PLACEHOLDER_SVG,
         media_type="image/svg+xml",
         headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@router.get(
+    "/properties/media/{media_unique_id}",
+    summary="Stream property media by unique identifier",
+)
+async def get_property_media_by_uid(
+    media_unique_id: str,
+) -> Response:
+    """Stream property media by unique identifier with caching and path traversal protection."""
+    safe_uid = re.sub(r"[^a-zA-Z0-9_-]", "", media_unique_id)
+    if not safe_uid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": {"code": "INVALID_MEDIA", "message": "Invalid media identifier"}},
+        )
+
+    for ext in (".jpg", ".png", ".webp"):
+        candidate = os.path.abspath(os.path.join(MEDIA_CACHE_DIR, f"{safe_uid}{ext}"))
+        if candidate.startswith(os.path.abspath(MEDIA_CACHE_DIR)) and os.path.exists(candidate):
+            with open(candidate, "rb") as f:
+                data = f.read()
+            mime = "image/jpeg" if ext == ".jpg" else "image/png" if ext == ".png" else "image/webp"
+            return Response(
+                content=data,
+                media_type=mime,
+                headers={
+                    "Cache-Control": "public, max-age=86400",
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail={"error": {"code": "MEDIA_NOT_FOUND", "message": "Media not found"}},
     )
 
 
@@ -429,9 +466,7 @@ _RATE_LIMIT_BUCKETS: dict[str, list[float]] = defaultdict(list)
 _MAX_BUCKETS = 10000
 
 
-def enforce_miniapp_rate_limit(
-    key: str, max_requests: int = 20, window_seconds: int = 60
-) -> None:
+def enforce_miniapp_rate_limit(key: str, max_requests: int = 20, window_seconds: int = 60) -> None:
     """Bounded in-memory rate limiter keyed by verified user ID.
 
     Note: Suitable for single-instance deployment. In distributed multi-replica

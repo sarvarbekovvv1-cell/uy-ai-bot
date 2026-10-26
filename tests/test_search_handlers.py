@@ -375,4 +375,3 @@ async def test_dispatcher_real_routing_regression(db_session: AsyncSession) -> N
     update_unregistered = make_message_update(999888, "🏠 Uy sotib olish", 108)
     await dp.feed_update(mock_bot, update_unregistered, session=db_session)
     assert "avval ro‘yxatdan o‘tishni yakunlang" in get_last_sent_text()
-

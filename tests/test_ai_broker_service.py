@@ -251,9 +251,7 @@ async def test_viewing_and_broker_routing(
     approved_id = sample_properties["approved"].id
 
     # Viewing routing
-    provider.set_next_intent(
-        AIBrokerIntent(intent="request_viewing", property_id=approved_id)
-    )
+    provider.set_next_intent(AIBrokerIntent(intent="request_viewing", property_id=approved_id))
     res_view = await service.process_message(
         session=db_session,
         user=sample_user,
@@ -266,9 +264,7 @@ async def test_viewing_and_broker_routing(
     service._user_last_request.clear()
 
     # Broker routing
-    provider.set_next_intent(
-        AIBrokerIntent(intent="request_broker", property_id=approved_id)
-    )
+    provider.set_next_intent(AIBrokerIntent(intent="request_broker", property_id=approved_id))
     res_broker = await service.process_message(
         session=db_session,
         user=sample_user,

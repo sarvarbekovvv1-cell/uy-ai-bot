@@ -34,13 +34,10 @@ async def list_viewings(
     _: User = Depends(require_permission(PERM_VIEWINGS_VIEW)),
 ) -> PaginatedResponse:
     """Return paginated viewing requests."""
-    stmt = (
-        select(ViewingRequest)
-        .options(
-            selectinload(ViewingRequest.customer),
-            selectinload(ViewingRequest.property),
-            selectinload(ViewingRequest.broker),
-        )
+    stmt = select(ViewingRequest).options(
+        selectinload(ViewingRequest.customer),
+        selectinload(ViewingRequest.property),
+        selectinload(ViewingRequest.broker),
     )
 
     if status_filter:
@@ -66,9 +63,7 @@ async def list_viewings(
             or f"Customer #{v.customer_user_id}"
         )
         broker_name = (
-            f"{v.broker.first_name or ''} {v.broker.last_name or ''}".strip()
-            if v.broker
-            else None
+            f"{v.broker.first_name or ''} {v.broker.last_name or ''}".strip() if v.broker else None
         )
         prop_title = v.property.title if v.property else f"Property #{v.property_id}"
 

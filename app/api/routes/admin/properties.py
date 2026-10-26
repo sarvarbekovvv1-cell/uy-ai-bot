@@ -1,14 +1,19 @@
 """Admin property management and moderation routes."""
 
+import base64
+import os
+import re
+import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_db_session
 from app.api.schemas.admin import (
+    AdminPropertyCreateRequest,
     AdminPropertyDetail,
     AdminPropertyItem,
     AdminPropertyMediaItem,
@@ -18,18 +23,28 @@ from app.api.schemas.admin import (
 )
 from app.logging import get_logger
 from app.models.property import Property
+from app.models.property_media import PropertyMedia
 from app.models.user import User
 from app.services.admin_auth_service import AdminAuthService
 from app.services.admin_rbac import (
     PERM_PROPERTIES_ARCHIVE,
+    PERM_PROPERTIES_CREATE,
     PERM_PROPERTIES_MODERATE,
     PERM_PROPERTIES_VIEW,
     has_permission,
     require_permission,
     verify_csrf_token,
 )
+from app.services.property_service import PropertyService
 
 logger = get_logger(__name__)
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+MEDIA_CACHE_DIR = os.path.join(BASE_DIR, ".cache", "media")
+os.makedirs(MEDIA_CACHE_DIR, exist_ok=True)
+
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
 
 router = APIRouter(prefix="/properties", tags=["Admin Properties"])
 
@@ -136,9 +151,7 @@ async def get_property_detail(
     prop = result.scalar_one_or_none()
 
     if not prop:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Property not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found.")
 
     # Safe media URLs (using API media proxy, never raw bot token or telegram paths)
     media_items = [
@@ -317,3 +330,290 @@ async def archive_property(
     await session.commit()
     logger.info("Property id=%d archived by staff user_id=%d", prop.id, staff_user.id)
     return {"status": "ok", "message": f"Property #{prop.id} archived"}
+
+
+@router.post("/upload-media", status_code=status.HTTP_201_CREATED)
+async def upload_property_media(
+    request: Request,
+    staff_user: User = Depends(require_permission(PERM_PROPERTIES_CREATE)),
+    _: None = Depends(verify_csrf_token),
+) -> dict[str, str]:
+    """Upload property photo with MIME and magic bytes security checks."""
+    content_type_header = request.headers.get("content-type", "").lower()
+
+    if content_type_header.startswith("application/json"):
+        try:
+            payload = await request.json()
+            mime_type = payload.get("content_type", "")
+            data_b64 = payload.get("data_base64", "")
+            content = base64.b64decode(data_b64)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid JSON/base64 payload: {e}",
+            ) from e
+    else:
+        mime_type = content_type_header.split(";")[0].strip()
+        content = await request.body()
+
+    if mime_type not in ALLOWED_MIME_TYPES:
+        allowed_str = ", ".join(sorted(ALLOWED_MIME_TYPES))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file type '{mime_type}'. Allowed types: {allowed_str}",
+        )
+
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty.",
+        )
+
+    if len(content) > MAX_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File exceeds maximum allowed size of {MAX_IMAGE_BYTES // (1024 * 1024)}MB.",
+        )
+
+    # Exact magic byte inspection matching specific MIME type
+    is_valid_magic = False
+    ext = ".jpg"
+    if mime_type == "image/jpeg" and content.startswith(b"\xff\xd8\xff"):
+        is_valid_magic = True
+        ext = ".jpg"
+    elif mime_type == "image/png" and content.startswith(b"\x89PNG\r\n\x1a\n"):
+        is_valid_magic = True
+        ext = ".png"
+    elif (
+        mime_type == "image/webp"
+        and content.startswith(b"RIFF")
+        and len(content) > 12
+        and content[8:12] == b"WEBP"
+    ):
+        is_valid_magic = True
+        ext = ".webp"
+
+    if not is_valid_magic:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "File content does not match expected image signature (magic bytes) "
+                "for declared MIME type."
+            ),
+        )
+
+    safe_uid = f"admin_media_{uuid.uuid4().hex}"
+    filename = f"{safe_uid}{ext}"
+    dest_path = os.path.abspath(os.path.join(MEDIA_CACHE_DIR, filename))
+
+    if not dest_path.startswith(os.path.abspath(MEDIA_CACHE_DIR)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid destination path traversal detected.",
+        )
+
+    with open(dest_path, "wb") as f:
+        f.write(content)
+
+    logger.info("Media %s uploaded by staff user_id=%d", safe_uid, staff_user.id)
+
+    return {
+        "media_unique_id": safe_uid,
+        "file_type": "photo",
+        "safe_url": f"/api/admin/v1/properties/media/{safe_uid}",
+    }
+
+
+@router.get("/media/{media_unique_id}")
+async def get_uploaded_media(
+    media_unique_id: str,
+    _: User = Depends(require_permission(PERM_PROPERTIES_VIEW)),
+) -> Response:
+    """Stream uploaded media for preview in Admin panel with path traversal protection."""
+    safe_uid = re.sub(r"[^a-zA-Z0-9_-]", "", media_unique_id)
+    if not safe_uid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid media identifier",
+        )
+
+    for ext in (".jpg", ".png", ".webp"):
+        candidate = os.path.abspath(os.path.join(MEDIA_CACHE_DIR, f"{safe_uid}{ext}"))
+        if candidate.startswith(os.path.abspath(MEDIA_CACHE_DIR)) and os.path.exists(candidate):
+            with open(candidate, "rb") as f:
+                data = f.read()
+            mime = "image/jpeg" if ext == ".jpg" else "image/png" if ext == ".png" else "image/webp"
+            return Response(
+                content=data,
+                media_type=mime,
+                headers={
+                    "Cache-Control": "public, max-age=86400",
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found.")
+
+
+@router.post("", response_model=AdminPropertyDetail, status_code=status.HTTP_201_CREATED)
+async def create_property(
+    request: Request,
+    body: AdminPropertyCreateRequest,
+    session: AsyncSession = Depends(get_db_session),
+    staff_user: User = Depends(require_permission(PERM_PROPERTIES_CREATE)),
+    _: None = Depends(verify_csrf_token),
+) -> AdminPropertyDetail:
+    """Create a new property listing with optional auto-approval and media attachment."""
+    # 1. Check auto-approve permissions
+    if body.auto_approve and not has_permission(staff_user, PERM_PROPERTIES_MODERATE):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to auto-approve property listings.",
+        )
+
+    # 2. Resolve owner
+    resolved_owner_id = staff_user.id
+    if body.owner_user_id is not None:
+        target_owner = await session.get(User, body.owner_user_id)
+        if not target_owner:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Specified owner user #{body.owner_user_id} does not exist.",
+            )
+        resolved_owner_id = target_owner.id
+
+    prop_service = PropertyService()
+    try:
+        prop_service.validate_property_attributes(
+            listing_type=body.listing_type,
+            property_type=body.property_type,
+            rooms=body.rooms,
+            total_area=body.total_area,
+            condition=body.condition,
+            price=body.price,
+            currency=body.currency,
+            cadastre_status=body.cadastre_status,
+            floor=body.floor,
+            total_floors=body.total_floors,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+    # 3. Create property entity
+    prop = await prop_service.create_draft(
+        session,
+        owner_user_id=resolved_owner_id,
+        listing_type=body.listing_type,
+        property_type=body.property_type,
+        region=body.region,
+        district=body.district,
+        address=body.address,
+        rooms=body.rooms,
+        total_area=body.total_area,
+        living_area=body.living_area,
+        floor=body.floor,
+        total_floors=body.total_floors,
+        condition=body.condition,
+        construction_type=body.construction_type,
+        has_furniture=body.has_furniture,
+        cadastre_status=body.cadastre_status,
+        price=body.price,
+        currency=body.currency,
+        negotiable=body.negotiable,
+        latitude=body.latitude,
+        longitude=body.longitude,
+        title=body.title,
+        description=body.description,
+    )
+
+    # 3. Associate media records
+    media_items: list[PropertyMedia] = []
+    for idx, uid in enumerate(body.media_unique_ids):
+        safe_uid = re.sub(r"[^a-zA-Z0-9_-]", "", uid)
+        pm = PropertyMedia(
+            property_id=prop.id,
+            telegram_file_id=f"admin_file_{safe_uid}",
+            telegram_file_unique_id=safe_uid,
+            media_type="photo",
+            sort_order=idx + 1,
+        )
+        session.add(pm)
+        media_items.append(pm)
+
+    # 4. Status assignment
+    now_utc = datetime.now(UTC)
+    if body.auto_approve:
+        prop.status = "approved"
+        prop.approved_at = now_utc
+        prop.approved_by_user_id = staff_user.id
+    else:
+        prop.status = "submitted"
+        prop.submitted_at = now_utc
+
+    # 5. Audit log
+    client_ip = request.client.host if request.client else None
+    await AdminAuthService.record_audit_event(
+        session,
+        actor_user_id=staff_user.id,
+        action="property.create_manual",
+        entity_type="property",
+        entity_id=prop.id,
+        metadata={
+            "listing_type": prop.listing_type,
+            "property_type": prop.property_type,
+            "district": prop.district,
+            "price": float(prop.price),
+            "status": prop.status,
+            "auto_approve": body.auto_approve,
+            "media_count": len(media_items),
+        },
+        ip_address=client_ip,
+    )
+
+    await session.commit()
+    await session.refresh(prop)
+
+    # Build response detail
+    media_resp = [
+        AdminPropertyMediaItem(
+            id=m.id,
+            file_type=m.media_type,
+            safe_url=f"/api/miniapp/v1/properties/media/{m.id}",
+            is_main=(idx == 0),
+        )
+        for idx, m in enumerate(media_items)
+    ]
+
+    owner_entity = target_owner if (body.owner_user_id is not None and target_owner) else staff_user
+    owner_name = (
+        f"{owner_entity.first_name or ''} {owner_entity.last_name or ''}".strip()
+        or f"User #{owner_entity.id}"
+    )
+
+    return AdminPropertyDetail(
+        id=prop.id,
+        title=prop.title,
+        property_type=prop.property_type,
+        listing_type=prop.listing_type,
+        status=prop.status,
+        region=prop.region,
+        district=prop.district,
+        address=prop.address,
+        price=prop.price,
+        currency=prop.currency,
+        rooms=prop.rooms,
+        total_area=prop.total_area,
+        condition=prop.condition,
+        has_furniture=prop.has_furniture,
+        cadastre_status=prop.cadastre_status,
+        description=prop.description,
+        created_at=prop.created_at,
+        submitted_at=prop.submitted_at,
+        rejection_reason=prop.rejection_reason,
+        owner=AdminPropertyOwnerInfo(
+            id=owner_entity.id,
+            name=owner_name,
+            phone=owner_entity.phone,
+        ),
+        media=media_resp,
+    )

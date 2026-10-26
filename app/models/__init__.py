@@ -8,6 +8,14 @@ from app.models.crm_sync import (
     CRMSyncEvent,
 )
 from app.models.favorite import Favorite
+from app.models.kaizen import (
+    KAIZEN_CYCLE_STATUSES,
+    KAIZEN_OUTCOMES,
+    KAIZEN_RECOMMENDATION_STATUSES,
+    KAIZEN_SEVERITIES,
+    KaizenCycle,
+    KaizenRecommendation,
+)
 from app.models.lead import (
     ACTIVE_LEAD_STAGES,
     FOLLOWUP_STATUSES,
@@ -77,4 +85,10 @@ __all__ = [
     "StaffCredential",
     "AdminSession",
     "AdminAuditEvent",
+    "KaizenCycle",
+    "KaizenRecommendation",
+    "KAIZEN_CYCLE_STATUSES",
+    "KAIZEN_OUTCOMES",
+    "KAIZEN_RECOMMENDATION_STATUSES",
+    "KAIZEN_SEVERITIES",
 ]

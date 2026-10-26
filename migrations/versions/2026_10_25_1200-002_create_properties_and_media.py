@@ -116,9 +116,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(
-        op.f("ix_property_media_telegram_file_unique_id"), table_name="property_media"
-    )
+    op.drop_index(op.f("ix_property_media_telegram_file_unique_id"), table_name="property_media")
     op.drop_index(op.f("ix_property_media_property_id"), table_name="property_media")
     op.drop_table("property_media")
 

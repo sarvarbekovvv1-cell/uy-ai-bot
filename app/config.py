@@ -89,9 +89,7 @@ class Settings(BaseSettings):
     admin_session_cookie_name: str = Field(
         default="uyai_admin_session", alias="ADMIN_SESSION_COOKIE_NAME"
     )
-    admin_session_cookie_secure: bool = Field(
-        default=False, alias="ADMIN_SESSION_COOKIE_SECURE"
-    )
+    admin_session_cookie_secure: bool = Field(default=False, alias="ADMIN_SESSION_COOKIE_SECURE")
     admin_session_secret: str = Field(default="", alias="ADMIN_SESSION_SECRET")
 
     def get_admin_allowed_origins(self) -> list[str]:

@@ -98,10 +98,10 @@ def test_outlier_filtering_with_extreme_listing() -> None:
         currency="USD",
     )
     comps = [
-        (create_mock_property(1, Decimal("85000"), Decimal("50")), 0.95),   # 1700 / m2
-        (create_mock_property(2, Decimal("87500"), Decimal("50")), 0.95),   # 1750 / m2
-        (create_mock_property(3, Decimal("90000"), Decimal("50")), 0.95),   # 1800 / m2
-        (create_mock_property(4, Decimal("89000"), Decimal("50")), 0.95),   # 1780 / m2
+        (create_mock_property(1, Decimal("85000"), Decimal("50")), 0.95),  # 1700 / m2
+        (create_mock_property(2, Decimal("87500"), Decimal("50")), 0.95),  # 1750 / m2
+        (create_mock_property(3, Decimal("90000"), Decimal("50")), 0.95),  # 1800 / m2
+        (create_mock_property(4, Decimal("89000"), Decimal("50")), 0.95),  # 1780 / m2
         (create_mock_property(5, Decimal("500000"), Decimal("50")), 0.95),  # 10000 / m2 (outlier!)
     ]
 
@@ -194,9 +194,7 @@ def test_tier_3_regional_fallback_caps_confidence_at_low() -> None:
         currency="USD",
     )
     # 7 comps from region
-    comps_7 = [
-        (create_mock_property(i, Decimal("70000"), Decimal("50")), 0.8) for i in range(1, 8)
-    ]
+    comps_7 = [(create_mock_property(i, Decimal("70000"), Decimal("50")), 0.8) for i in range(1, 8)]
     res = engine.calculate(inp, comps_7, tier=3)
 
     assert res.confidence == "low"
@@ -298,7 +296,7 @@ def test_two_comparable_extreme_disagreement_produces_insufficient_data() -> Non
         currency="USD",
     )
     comps = [
-        (create_mock_property(1, Decimal("50000"), Decimal("50")), 1.0),   # 1000 / m2
+        (create_mock_property(1, Decimal("50000"), Decimal("50")), 1.0),  # 1000 / m2
         (create_mock_property(2, Decimal("150000"), Decimal("50")), 1.0),  # 3000 / m2 (ratio 3.0x!)
     ]
     result = engine.calculate(inp, comps, tier=1)
@@ -370,9 +368,7 @@ def test_house_valuation_caps_confidence_and_warns() -> None:
         rooms=5,
         currency="USD",
     )
-    comps = [
-        (create_mock_property(i, Decimal("150000"), Decimal("150")), 1.0) for i in range(1, 8)
-    ]
+    comps = [(create_mock_property(i, Decimal("150000"), Decimal("150")), 1.0) for i in range(1, 8)]
     result = engine.calculate(inp, comps, tier=1)
 
     assert result.insufficient_data is False

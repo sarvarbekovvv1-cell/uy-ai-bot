@@ -360,8 +360,7 @@ class AIBrokerService:
                 "bo‘yicha professional broker bilan bog‘lanishni tasdiqlaysizmi?"
                 if lang == "uz"
                 else (
-                    f"👨‍💼 Хотите связаться с брокером по объекту "
-                    f"<b>#{prop.id} - {prop.title}</b>?"
+                    f"👨‍💼 Хотите связаться с брокером по объекту <b>#{prop.id} - {prop.title}</b>?"
                 )
             )
             return AIBrokerResult(

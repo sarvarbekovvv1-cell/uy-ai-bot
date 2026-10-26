@@ -95,9 +95,7 @@ async def logout(
     cookie_val = request.cookies.get(settings.admin_session_cookie_name)
     auth_header = request.headers.get("Authorization")
     raw_token = cookie_val or (
-        auth_header.split(" ", 1)[1]
-        if auth_header and auth_header.startswith("Bearer ")
-        else ""
+        auth_header.split(" ", 1)[1] if auth_header and auth_header.startswith("Bearer ") else ""
     )
 
     client_ip = request.client.host if request.client else None

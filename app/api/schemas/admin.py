@@ -286,3 +286,144 @@ class PaginatedResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+# -----------------------------------------------------------------------------
+# Property Creation Schemas (Phase 12)
+# -----------------------------------------------------------------------------
+class AdminPropertyCreateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    listing_type: str = Field(..., pattern="^(sale|rent)$")
+    property_type: str = Field(..., pattern="^(apartment|house|commercial|land)$")
+    title: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None, max_length=4000)
+    region: str = Field(..., min_length=2, max_length=100)
+    district: str = Field(..., min_length=2, max_length=100)
+    address: str = Field(..., min_length=3, max_length=255)
+    latitude: Decimal | None = Field(default=None, ge=Decimal("-90"), le=Decimal("90"))
+    longitude: Decimal | None = Field(default=None, ge=Decimal("-180"), le=Decimal("180"))
+    rooms: int = Field(..., ge=1, le=50)
+    total_area: Decimal = Field(..., gt=Decimal("0"), le=Decimal("100000"))
+    living_area: Decimal | None = Field(default=None, gt=Decimal("0"), le=Decimal("100000"))
+    floor: int | None = Field(default=None, ge=0, le=150)
+    total_floors: int | None = Field(default=None, ge=1, le=150)
+    condition: str = Field(..., pattern="^(new|renovated|needs_renovation|shell)$")
+    construction_type: str | None = Field(default=None, max_length=50)
+    has_furniture: bool = False
+    cadastre_status: str = Field(
+        default="unknown", pattern="^(available|not_available|in_process|unknown)$"
+    )
+    price: Decimal = Field(..., gt=Decimal("0"), le=Decimal("1000000000"))
+    currency: str = Field(default="USD", pattern="^(USD|UZS)$")
+    negotiable: bool = False
+    auto_approve: bool = False
+    owner_user_id: int | None = Field(default=None, ge=1)
+    media_unique_ids: list[str] = Field(default_factory=list, max_length=10)
+
+
+# -----------------------------------------------------------------------------
+# Kaizen / PDCA Intelligence Schemas (Phase 12)
+# -----------------------------------------------------------------------------
+class KaizenCycleCreateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    title: str = Field(..., min_length=3, max_length=255)
+    metric_key: str = Field(..., min_length=2, max_length=100)
+    target_value: Decimal | None = None
+    description: str | None = None
+    date_from: date | None = None
+    date_to: date | None = None
+    plan_text: str | None = None
+    recommendation_id: int | None = None
+
+
+class KaizenCyclePlanRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    plan_text: str = Field(..., min_length=5)
+    target_value: Decimal | None = None
+    date_from: date | None = None
+    date_to: date | None = None
+
+
+class KaizenCycleStartRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    do_text: str | None = None
+
+
+class KaizenCycleCheckRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    check_text: str | None = None
+
+
+class KaizenCycleCompleteRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    outcome: str = Field(..., pattern="^(successful|partially_successful|unsuccessful)$")
+    act_text: str | None = None
+
+
+class KaizenCycleCancelRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    reason: str | None = None
+
+
+class KaizenCycleItem(BaseModel):
+    id: int
+    title: str
+    description: str | None = None
+    status: str
+    metric_key: str
+    baseline_value: Decimal | None = None
+    target_value: Decimal | None = None
+    observed_value: Decimal | None = None
+    unit: str
+    date_from: date | None = None
+    date_to: date | None = None
+    plan_text: str | None = None
+    do_text: str | None = None
+    check_text: str | None = None
+    act_text: str | None = None
+    baseline_snapshot_json: str | None = None
+    check_snapshot_json: str | None = None
+    outcome: str | None = None
+    created_by_name: str | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    checking_at: datetime | None = None
+    completed_at: datetime | None = None
+    cancelled_at: datetime | None = None
+
+
+class KaizenRecommendationItem(BaseModel):
+    id: int
+    metric_key: str
+    category: str
+    title: str
+    description: str
+    evidence_json: str
+    recommendation_text: str
+    confidence: float
+    severity: str
+    status: str
+    generated_at: datetime
+    reviewed_at: datetime | None = None
+    linked_cycle_id: int | None = None
+
+
+class KaizenRecommendationReviewRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    action: str = Field(..., pattern="^(accept|dismiss)$")
+
+
+class KaizenGenerateRecommendationsRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    date_from: date | None = None
+    date_to: date | None = None
+    use_ai: bool = True

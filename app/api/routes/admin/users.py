@@ -151,9 +151,7 @@ async def update_user_roles(
     if "superadmin" in old_roles and "superadmin" not in body.roles:
         # Count remaining superadmins in database
         superadmin_count_stmt = (
-            select(func.count(UserRole.id))
-            .join(Role)
-            .where(Role.name == "superadmin")
+            select(func.count(UserRole.id)).join(Role).where(Role.name == "superadmin")
         )
         total_superadmins = (await session.execute(superadmin_count_stmt)).scalar_one() or 0
         if total_superadmins <= 1:

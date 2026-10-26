@@ -394,9 +394,7 @@ async def test_valuation_has_no_database_side_effects(
     await dp.feed_update(
         mock_bot, make_cb_update(user_id, "val_cond:renovated", 7), session=db_session
     )
-    await dp.feed_update(
-        mock_bot, make_cb_update(user_id, "val_floor:skip", 8), session=db_session
-    )
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_floor:skip", 8), session=db_session)
     val_svc = ValuationService(llm_provider=None)
     await dp.feed_update(
         mock_bot,
@@ -440,9 +438,7 @@ async def test_fsm_validation_for_invalid_area_and_floors(
 
     # 1. Invalid area: non-numeric
     mock_bot.reset_mock()
-    await dp.feed_update(
-        mock_bot, make_msg_update(user_id, "not_a_number", 6), session=db_session
-    )
+    await dp.feed_update(mock_bot, make_msg_update(user_id, "not_a_number", 6), session=db_session)
     texts1 = extract_bot_texts(mock_bot)
     assert any("musbat" in t.lower() or "raqam" in t.lower() for t in texts1)
 
@@ -489,17 +485,13 @@ async def test_callback_tampering_is_handled_gracefully(
         mock_bot, make_cb_update(user_id, "val_lt:SQL_INJECTION", 2), session=db_session
     )
     # 3. Tampered property type
-    await dp.feed_update(
-        mock_bot, make_cb_update(user_id, "val_pt:HACKED", 3), session=db_session
-    )
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_pt:HACKED", 3), session=db_session)
     # 4. Tampered district
     await dp.feed_update(
         mock_bot, make_cb_update(user_id, "val_dst:DROP_TABLE", 4), session=db_session
     )
     # 5. Tampered rooms
-    await dp.feed_update(
-        mock_bot, make_cb_update(user_id, "val_rooms:9999", 5), session=db_session
-    )
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_rooms:9999", 5), session=db_session)
     # 6. Tampered condition
     await dp.feed_update(
         mock_bot, make_cb_update(user_id, "val_cond:NOT_A_COND", 6), session=db_session

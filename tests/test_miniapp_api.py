@@ -417,7 +417,6 @@ async def test_media_streaming_security(
     assert res_bad.status_code == 404
 
 
-
 @pytest.mark.asyncio
 async def test_unapproved_property_statuses_matrix_rejected(
     miniapp_client: tuple[AsyncClient, dict[str, str], User],
@@ -588,7 +587,6 @@ async def test_viewing_request_input_validation(
     assert res_long.status_code == 422
 
 
-
 @pytest.mark.asyncio
 async def test_rate_limiter_exceeded_returns_429(
     miniapp_client: tuple[AsyncClient, dict[str, str], User],
@@ -596,6 +594,7 @@ async def test_rate_limiter_exceeded_returns_429(
 ) -> None:
     """Verify rate limiter blocks abusive repeated calls with 429 Too Many Requests."""
     from app.api.routes.miniapp import _RATE_LIMIT_BUCKETS
+
     client, headers, user = miniapp_client
     prop = await create_test_property(db_session, user.id, status="approved")
 

@@ -50,13 +50,10 @@ async def list_leads(
     staff_user: User = Depends(require_permission(PERM_LEADS_VIEW)),
 ) -> PaginatedResponse:
     """Return paginated leads with horizontal broker isolation."""
-    stmt = (
-        select(Lead)
-        .options(
-            selectinload(Lead.customer),
-            selectinload(Lead.property),
-            selectinload(Lead.broker),
-        )
+    stmt = select(Lead).options(
+        selectinload(Lead.customer),
+        selectinload(Lead.property),
+        selectinload(Lead.broker),
     )
 
     # Horizontal isolation: standard brokers only see their assigned leads
@@ -187,9 +184,7 @@ async def get_lead_detail(
         or f"Customer #{ld.customer_user_id}"
     )
     broker_name = (
-        f"{ld.broker.first_name or ''} {ld.broker.last_name or ''}".strip()
-        if ld.broker
-        else None
+        f"{ld.broker.first_name or ''} {ld.broker.last_name or ''}".strip() if ld.broker else None
     )
 
     notes = []

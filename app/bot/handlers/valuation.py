@@ -93,9 +93,7 @@ def get_valuation_service() -> ValuationService:
     return ValuationService(llm_provider=llm_provider)
 
 
-@valuation_router.message(
-    F.text.in_(VALUATION_BUTTONS) | F.text.in_({"/valuation", "/baholash"})
-)
+@valuation_router.message(F.text.in_(VALUATION_BUTTONS) | F.text.in_({"/valuation", "/baholash"}))
 async def handle_start_valuation(
     message: Message,
     state: FSMContext,
@@ -383,9 +381,7 @@ async def handle_valuation_condition(
                 )
 
 
-@valuation_router.callback_query(
-    PropertyValuationStates.waiting_floor, F.data == "val_floor:skip"
-)
+@valuation_router.callback_query(PropertyValuationStates.waiting_floor, F.data == "val_floor:skip")
 async def handle_valuation_floor_skip(
     callback: CallbackQuery,
     state: FSMContext,
@@ -544,14 +540,10 @@ def format_valuation_result_card(
     currency = res.currency
     est_fmt = f"{int(res.estimated_price):,}".replace(",", " ") if res.estimated_price else "N/A"
     min_fmt = (
-        f"{int(res.estimated_min_price):,}".replace(",", " ")
-        if res.estimated_min_price
-        else "N/A"
+        f"{int(res.estimated_min_price):,}".replace(",", " ") if res.estimated_min_price else "N/A"
     )
     max_fmt = (
-        f"{int(res.estimated_max_price):,}".replace(",", " ")
-        if res.estimated_max_price
-        else "N/A"
+        f"{int(res.estimated_max_price):,}".replace(",", " ") if res.estimated_max_price else "N/A"
     )
 
     if currency == "USD":
@@ -632,9 +624,7 @@ def format_valuation_result_card(
     )
 
 
-@valuation_router.callback_query(
-    PropertyValuationStates.viewing_result, F.data == "val_act:comps"
-)
+@valuation_router.callback_query(PropertyValuationStates.viewing_result, F.data == "val_act:comps")
 async def handle_valuation_view_comps(
     callback: CallbackQuery,
     state: FSMContext,
@@ -665,9 +655,7 @@ async def handle_valuation_view_comps(
         await callback.message.answer("\n".join(lines))
 
 
-@valuation_router.callback_query(
-    PropertyValuationStates.viewing_result, F.data == "val_act:search"
-)
+@valuation_router.callback_query(PropertyValuationStates.viewing_result, F.data == "val_act:search")
 async def handle_valuation_action_search(
     callback: CallbackQuery,
     state: FSMContext,
@@ -688,9 +676,7 @@ async def handle_valuation_action_search(
         )
 
 
-@valuation_router.callback_query(
-    PropertyValuationStates.viewing_result, F.data == "val_act:submit"
-)
+@valuation_router.callback_query(PropertyValuationStates.viewing_result, F.data == "val_act:submit")
 async def handle_valuation_action_submit(
     callback: CallbackQuery,
     state: FSMContext,
@@ -721,9 +707,7 @@ async def handle_valuation_action_submit(
         )
 
 
-@valuation_router.callback_query(
-    PropertyValuationStates.viewing_result, F.data == "val_act:broker"
-)
+@valuation_router.callback_query(PropertyValuationStates.viewing_result, F.data == "val_act:broker")
 async def handle_valuation_action_broker(
     callback: CallbackQuery,
     state: FSMContext,
@@ -755,9 +739,7 @@ async def handle_valuation_action_broker(
         )
 
 
-@valuation_router.callback_query(
-    PropertyValuationStates.viewing_result, F.data == "val_act:menu"
-)
+@valuation_router.callback_query(PropertyValuationStates.viewing_result, F.data == "val_act:menu")
 async def handle_valuation_action_menu(
     callback: CallbackQuery,
     state: FSMContext,

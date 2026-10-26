@@ -9,7 +9,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot.handlers.favorites import format_card_caption
+from app.bot.handlers.favorites import format_card_caption, resolve_property_photo
 from app.bot.keyboards import (
     MAIN_MENU_BUTTONS,
     get_main_menu_keyboard,
@@ -146,12 +146,14 @@ async def render_search_page(
         if p.media and len(p.media) > 0 and message.bot:
             try:
                 first_photo = p.media[0]
-                await message.answer_photo(
-                    photo=first_photo.telegram_file_id,
-                    caption=caption,
-                    reply_markup=card_kb,
-                )
-                continue
+                photo_payload = resolve_property_photo(first_photo)
+                if photo_payload:
+                    await message.answer_photo(
+                        photo=photo_payload,
+                        caption=caption,
+                        reply_markup=card_kb,
+                    )
+                    continue
             except Exception:
                 logger.warning(
                     "Failed to render property photo, falling back to text for id=%s",

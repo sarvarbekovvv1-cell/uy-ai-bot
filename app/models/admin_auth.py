@@ -44,8 +44,7 @@ class StaffCredential(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<StaffCredential(id={self.id}, user_id={self.user_id}, "
-            f"username='{self.username}')>"
+            f"<StaffCredential(id={self.id}, user_id={self.user_id}, username='{self.username}')>"
         )
 
 

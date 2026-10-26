@@ -7,6 +7,7 @@ from app.api.routes.admin.auth import router as auth_router
 from app.api.routes.admin.brokers import router as brokers_router
 from app.api.routes.admin.crm import router as crm_router
 from app.api.routes.admin.dashboard import router as dashboard_router
+from app.api.routes.admin.kaizen import router as kaizen_router
 from app.api.routes.admin.leads import router as leads_router
 from app.api.routes.admin.properties import router as properties_router
 from app.api.routes.admin.users import router as users_router
@@ -23,5 +24,6 @@ admin_router.include_router(leads_router)
 admin_router.include_router(viewings_router)
 admin_router.include_router(crm_router)
 admin_router.include_router(audit_router)
+admin_router.include_router(kaizen_router)
 
 __all__ = ["admin_router"]

@@ -202,10 +202,14 @@ async def test_update_password_success_and_revocation(
 
     # Verify all sessions revoked in database
     sessions = (
-        await db_session.execute(
-            select(AdminSession).where(AdminSession.user_id == admin_user.id)
+        (
+            await db_session.execute(
+                select(AdminSession).where(AdminSession.user_id == admin_user.id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(sessions) > 0
     assert all(s.is_revoked is True for s in sessions)
 

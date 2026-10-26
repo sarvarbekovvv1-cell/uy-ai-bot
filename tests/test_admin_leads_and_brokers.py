@@ -126,9 +126,7 @@ async def setup_leads_context(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_horizontal_broker_isolation(
-    async_client: AsyncClient, setup_leads_context
-) -> None:
+async def test_horizontal_broker_isolation(async_client: AsyncClient, setup_leads_context) -> None:
     """Test Broker A only sees their own leads, while Head Broker sees all leads."""
     head_user, broker_a, broker_b, lead_a, lead_b = setup_leads_context
 

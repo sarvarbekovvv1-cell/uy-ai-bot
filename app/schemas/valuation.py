@@ -9,9 +9,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 class PropertyValuationInput(BaseModel):
     """Validated input parameters for property market valuation."""
 
-    listing_type: Literal["sale", "rent"] = Field(
-        description="Transaction category: sale or rent."
-    )
+    listing_type: Literal["sale", "rent"] = Field(description="Transaction category: sale or rent.")
     property_type: Literal["apartment", "house", "commercial", "land"] = Field(
         description="Property classification. Residential (apartment, house) supported for MVP."
     )

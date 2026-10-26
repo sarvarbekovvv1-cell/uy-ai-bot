@@ -20,6 +20,7 @@ from app.models.user import User
 @pytest.fixture(autouse=True)
 def setup_webhook_dependencies(db_session: AsyncSession):
     """Ensure FastAPI dependency injection uses test DB session."""
+
     async def override_get_db_session():
         yield db_session
 

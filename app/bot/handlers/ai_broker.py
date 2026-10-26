@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.bot.handlers.favorites import resolve_property_photo
 from app.bot.handlers.property_search import format_card_caption
 from app.bot.keyboards import (
     MAIN_MENU_BUTTONS,
@@ -34,9 +35,7 @@ AI_BROKER_TRIGGERS: set[str] = {
 
 # Localized triggers for exiting AI Broker
 AI_EXIT_TRIGGERS: set[str] = {
-    locale_dict["btn_ai_exit"]
-    for locale_dict in LOCALES.values()
-    if "btn_ai_exit" in locale_dict
+    locale_dict["btn_ai_exit"] for locale_dict in LOCALES.values() if "btn_ai_exit" in locale_dict
 } | {"❌ Suhbatni yakunlash", "❌ Завершить диалог", "❌ AI suhbatni tugatish"}
 
 
@@ -172,12 +171,14 @@ async def handle_ai_broker_message(
             if p.media and len(p.media) > 0 and message.bot:
                 try:
                     first_photo = p.media[0]
-                    await message.answer_photo(
-                        photo=first_photo.telegram_file_id,
-                        caption=caption,
-                        reply_markup=card_kb,
-                    )
-                    continue
+                    photo_payload = resolve_property_photo(first_photo)
+                    if photo_payload:
+                        await message.answer_photo(
+                            photo=photo_payload,
+                            caption=caption,
+                            reply_markup=card_kb,
+                        )
+                        continue
                 except Exception:
                     pass
 

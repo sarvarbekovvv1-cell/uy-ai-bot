@@ -1,6 +1,5 @@
 """Tests for Admin Staff Authentication, Scrypt Hashing, Sessions, and Lockout."""
 
-
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession

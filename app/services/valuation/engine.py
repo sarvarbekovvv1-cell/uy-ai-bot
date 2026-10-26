@@ -252,9 +252,7 @@ class ValuationEngine:
             elif relative_dispersion > Decimal("0.45"):
                 if confidence == "high":
                     confidence = "medium"
-                    warnings.append(
-                        "Taqqoslama e'lonlar narxlarida sezilarli tarqoqlik kuzatildi."
-                    )
+                    warnings.append("Taqqoslama e'lonlar narxlarida sezilarli tarqoqlik kuzatildi.")
 
         # Property type heterogeneity check: Houses vary widely by plot and construction
         if input_data.property_type == "house":
