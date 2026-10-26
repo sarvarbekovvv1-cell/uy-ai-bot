@@ -249,5 +249,60 @@ If `AI_BROKER_ENABLED=false`, the bot provides a localized notice that AI Broker
 
 ### Known Limitations
 
+---
+
+## amoCRM Integration (Phase 10)
+
+UyAI integrates with amoCRM asynchronously and safely using a **Transactional Outbox** pattern.
+
+### Architectural Principles
+
+1. **Transactional Outbox & Failure Isolation**:
+   Customer operations (viewing requests, broker contact, AI broker inquiries) write to internal tables (`viewing_requests`, `leads`) and enqueue an outbox event (`crm_sync_events`) in the **same database transaction**. The internal transaction commits completely regardless of whether amoCRM is online, slow, or rate-limited.
+2. **Provider Abstraction**:
+   Business logic interacts with `AmoCRMProviderProtocol`. Automated test suites execute against `FakeAmoCRMProvider` without needing a real amoCRM account or network access.
+3. **Deterministic Entity Linking**:
+   `crm_entity_links` stores 1-to-1 mappings between UyAI entities (`User`, `Lead`) and amoCRM objects (`Contact`, `Lead`). This prevents duplicate records upon retries or cross-flow operations (Telegram + Mini App + AI Broker).
+4. **Data Minimization & PII Protection**:
+   Only public property attributes and customer contact names/phones are synchronized. Property owner contact information, customer authentication material, Telegram initData, and Gemini conversation histories are strictly excluded.
+5. **Bidirectional Webhook with Loop Prevention**:
+   Incoming webhooks at `POST /api/integrations/amocrm/webhook` update internal lead stages without re-enqueuing outbound events back to amoCRM (`enqueue_crm=False`), preventing infinite loops.
+6. **Token Security**:
+   Tokens are stored in environment variables and local gitignored runtime cache (`.cache/amocrm_tokens.json`). Single-flight lock (`asyncio.Lock`) prevents concurrent token refresh storms.
+
+### Environment Configuration
+
+```env
+AMOCRM_ENABLED=false
+AMOCRM_BASE_URL=https://your-agency.amocrm.ru
+AMOCRM_CLIENT_ID=your_client_id
+AMOCRM_CLIENT_SECRET=your_client_secret
+AMOCRM_REDIRECT_URI=https://your-agency.amocrm.ru
+AMOCRM_ACCESS_TOKEN=
+AMOCRM_REFRESH_TOKEN=your_refresh_token
+AMOCRM_PIPELINE_ID=1234567
+AMOCRM_DEFAULT_RESPONSIBLE_USER_ID=
+AMOCRM_REQUEST_TIMEOUT_SECONDS=10.0
+AMOCRM_MAX_RETRIES=5
+AMOCRM_WEBHOOK_SECRET=your_unguessable_webhook_secret
+AMOCRM_STAGE_MAPPING_JSON={"new": 101, "contacted": 102, "qualified": 103, "viewing_scheduled": 104, "negotiation": 105, "won": 142, "lost": 143}
+AMOCRM_BROKER_MAPPING_JSON={"2": 99991, "3": 99992}
+```
+
+### Operational Commands
+
+```bash
+# Check current outbox queue status
+python3 scripts/process_crm_outbox.py --status
+
+# Process a batch of pending events
+python3 scripts/process_crm_outbox.py --process --batch-size 20
+
+# Reset dead/failed events to pending for retry
+python3 scripts/process_crm_outbox.py --retry-failed
+```
+
+### Known Limitations
+
 - Real-time conversational context is bounded to the recent turns in active Telegram FSM state (`AIBrokerStates.chatting`).
 - Complex legal or tax inquiries produce non-authoritative general guidance with explicit disclaimers and recommendations to consult a licensed human broker.

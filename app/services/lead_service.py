@@ -96,6 +96,33 @@ class LeadService:
         user_roles = {r.name for r in user.roles}
         return bool({"superadmin", "head_broker"} & user_roles)
 
+    async def _enqueue_crm_event(
+        self,
+        session: AsyncSession,
+        *,
+        event_type: str,
+        lead_id: int,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        """Enqueue outbox event for CRM synchronization if enabled."""
+        from app.config import get_settings
+        from app.models.crm_sync import CRMSyncEvent
+
+        if not get_settings().amocrm_enabled:
+            return
+
+        event = CRMSyncEvent(
+            provider="amocrm",
+            event_type=event_type,
+            entity_type="lead",
+            entity_id=lead_id,
+            payload_json=json.dumps(payload) if payload else None,
+            status="pending",
+            attempt_count=0,
+            next_attempt_at=datetime.now(UTC),
+        )
+        session.add(event)
+
     def validate_stage_transition(self, current_stage: str, target_stage: str) -> None:
         """Validate state machine stage progression."""
         if target_stage not in LEAD_STAGES:
@@ -147,6 +174,9 @@ class LeadService:
 
             if updates:
                 active_lead = await self.lead_repo.update(session, active_lead.id, **updates)
+            await self._enqueue_crm_event(
+                session, event_type="lead_created", lead_id=active_lead.id
+            )
             return active_lead
 
         # Create new lead
@@ -187,6 +217,7 @@ class LeadService:
             request.property_id,
             source,
         )
+        await self._enqueue_crm_event(session, event_type="lead_created", lead_id=lead.id)
         return lead
 
     async def create_lead(
@@ -212,6 +243,9 @@ class LeadService:
             property_id=property_id,
         )
         if existing:
+            await self._enqueue_crm_event(
+                session, event_type="lead_created", lead_id=existing.id
+            )
             return existing
 
         now = datetime.now(UTC)
@@ -244,6 +278,7 @@ class LeadService:
                 new_value=str(broker_user_id),
             )
 
+        await self._enqueue_crm_event(session, event_type="lead_created", lead_id=lead.id)
         return lead
 
     async def get_lead(
@@ -358,6 +393,7 @@ class LeadService:
         broker_user_id: int,
         target_stage: str,
         close_reason: str | None = None,
+        enqueue_crm: bool = True,
     ) -> Lead:
         """Progress lead to a new stage."""
         lead = await self.lead_repo.get_by_id(session, lead_id)
@@ -423,6 +459,13 @@ class LeadService:
             lead.stage,
             target_stage,
         )
+        if enqueue_crm:
+            await self._enqueue_crm_event(
+                session,
+                event_type="stage_updated",
+                lead_id=lead_id,
+                payload={"target_stage": target_stage},
+            )
         return updated
 
     # --- Follow-Up Tasks ---
@@ -630,6 +673,13 @@ class LeadService:
             lead_id=lead_id,
             actor_user_id=author_user_id,
             event_type="note_added",
+        )
+
+        await self._enqueue_crm_event(
+            session,
+            event_type="note_added",
+            lead_id=lead_id,
+            payload={"note_text": clean_text},
         )
 
         return note

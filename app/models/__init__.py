@@ -1,5 +1,11 @@
 """SQLAlchemy database models for UyAI."""
 
+from app.models.crm_sync import (
+    CRM_EVENT_STATUSES,
+    CRM_PROVIDERS,
+    CRMEntityLink,
+    CRMSyncEvent,
+)
 from app.models.favorite import Favorite
 from app.models.lead import (
     ACTIVE_LEAD_STAGES,
@@ -63,4 +69,8 @@ __all__ = [
     "CADASTRE_STATUSES",
     "PROPERTY_STATUSES",
     "SUPPORTED_CURRENCIES",
+    "CRMSyncEvent",
+    "CRMEntityLink",
+    "CRM_EVENT_STATUSES",
+    "CRM_PROVIDERS",
 ]

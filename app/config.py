@@ -59,6 +59,63 @@ class Settings(BaseSettings):
     )
     miniapp_dev_auth_enabled: bool = Field(default=False, alias="MINIAPP_DEV_AUTH_ENABLED")
 
+    # amoCRM Integration Configuration
+    amocrm_enabled: bool = Field(default=False, alias="AMOCRM_ENABLED")
+    amocrm_base_url: str = Field(default="", alias="AMOCRM_BASE_URL")
+    amocrm_subdomain: str = Field(default="", alias="AMOCRM_SUBDOMAIN")
+    amocrm_client_id: str = Field(default="", alias="AMOCRM_CLIENT_ID")
+    amocrm_client_secret: str = Field(default="", alias="AMOCRM_CLIENT_SECRET")
+    amocrm_redirect_uri: str = Field(default="", alias="AMOCRM_REDIRECT_URI")
+    amocrm_access_token: str = Field(default="", alias="AMOCRM_ACCESS_TOKEN")
+    amocrm_refresh_token: str = Field(default="", alias="AMOCRM_REFRESH_TOKEN")
+    amocrm_pipeline_id: int | None = Field(default=None, alias="AMOCRM_PIPELINE_ID")
+    amocrm_default_responsible_user_id: int | None = Field(
+        default=None, alias="AMOCRM_DEFAULT_RESPONSIBLE_USER_ID"
+    )
+    amocrm_request_timeout_seconds: float = Field(
+        default=10.0, alias="AMOCRM_REQUEST_TIMEOUT_SECONDS"
+    )
+    amocrm_max_retries: int = Field(default=5, alias="AMOCRM_MAX_RETRIES")
+    amocrm_webhook_secret: str = Field(default="", alias="AMOCRM_WEBHOOK_SECRET")
+    amocrm_stage_mapping_json: str = Field(default="", alias="AMOCRM_STAGE_MAPPING_JSON")
+    amocrm_broker_mapping_json: str = Field(default="", alias="AMOCRM_BROKER_MAPPING_JSON")
+
+    def get_effective_amocrm_base_url(self) -> str:
+        """Return canonical amoCRM base URL without trailing slash."""
+        if self.amocrm_base_url and self.amocrm_base_url.strip():
+            return self.amocrm_base_url.strip().rstrip("/")
+        if self.amocrm_subdomain and self.amocrm_subdomain.strip():
+            return f"https://{self.amocrm_subdomain.strip()}.amocrm.ru"
+        return ""
+
+    def get_amocrm_stage_mapping(self) -> dict[str, int]:
+        """Return mapping of internal Lead stage to amoCRM status_id."""
+        if not self.amocrm_stage_mapping_json or not self.amocrm_stage_mapping_json.strip():
+            return {}
+        try:
+            import json
+
+            raw = json.loads(self.amocrm_stage_mapping_json)
+            if isinstance(raw, dict):
+                return {str(k): int(v) for k, v in raw.items()}
+        except Exception:
+            pass
+        return {}
+
+    def get_amocrm_broker_mapping(self) -> dict[int, int]:
+        """Return mapping of local broker user_id to amoCRM responsible_user_id."""
+        if not self.amocrm_broker_mapping_json or not self.amocrm_broker_mapping_json.strip():
+            return {}
+        try:
+            import json
+
+            raw = json.loads(self.amocrm_broker_mapping_json)
+            if isinstance(raw, dict):
+                return {int(k): int(v) for k, v in raw.items()}
+        except Exception:
+            pass
+        return {}
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:

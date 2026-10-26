@@ -33,7 +33,7 @@ SECRET_PATTERNS = [
     (
         "Generic API Key / Token Assignment",
         re.compile(
-            r"(?i)(?:api_key|bot_token|access_token|secret_key)\s*[:=]\s*['\"]([^'\"]{20,})['\"]"
+            r"(?i)(?:api_key|bot_token|access_token|refresh_token|secret_key|client_secret)\s*[:=]\s*['\"]([^'\"]{20,})['\"]"
         ),
     ),
 ]
