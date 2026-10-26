@@ -6,13 +6,47 @@ UyAI is a modern digital real-estate management platform designed to streamline 
 
 ---
 
+---
+
+## Telegram Mini App + Interactive Map (Phase 9)
+
+UyAI includes a high-performance Telegram Mini App with an interactive Leaflet property map.
+
+### Architecture
+- **Backend**: FastAPI endpoints mounted under `/api/miniapp/v1/` (`/me`, `/properties`, `/properties/{id}`, `/map/properties`, `/favorites`, `/viewing-request`, `/broker-contact`).
+- **Cryptographic Authentication**: Every request verifies the official Telegram WebApp `initData` signature (`HMAC-SHA256` with `WebAppData` key, constant-time `hmac.compare_digest`, freshness check within `TELEGRAM_INIT_DATA_MAX_AGE_SECONDS`). The frontend never sends unverified user IDs.
+- **Frontend**: Lightweight React 18 + TypeScript + Vite + Leaflet stack located in `miniapp/` with Telegram WebApp SDK integration, auto-dark/light theme support, and responsive mobile-first UI.
+- **Privacy & Safety**: Exposes strictly `APPROVED` listings. Media is served securely via cached backend proxy without exposing Telegram bot tokens.
+
+### Configuration
+```env
+MINIAPP_URL=https://app.uyai.uz
+MINIAPP_ALLOWED_ORIGINS=["https://app.uyai.uz","http://localhost:5173"]
+TELEGRAM_INIT_DATA_MAX_AGE_SECONDS=86400
+MINIAPP_DEV_AUTH_ENABLED=false
+```
+
+### Running Frontend Locally
+```bash
+cd miniapp
+npm install
+npm run dev
+```
+For production build:
+```bash
+cd miniapp
+npm run build
+```
+
+---
+
 ## Current Development Phase
 
-> **Current Phase: Phase 2 — Telegram Bot Core + User Registration + RBAC Foundation**
+> **Current Phase: Phase 9 — Telegram Mini App + Interactive Property Map**
 >
-> **Notice:** Core user onboarding, language selection (Uzbek/Russian), privacy consent, phone verification via Telegram Contact, user role assignment (`buyer`), settings, and main navigation menu are implemented.
->
-> Business workflows (property CRUD, AI valuation, amoCRM sync, Mini App, maps, HR testing, analytics, Kaizen continuous improvement, and payments) are intentionally **NOT** implemented in this phase.
+> **Notice:** Complete Mini App frontend and backend implemented with cryptographic authentication, interactive Leaflet map, property feed, filters, favorites, viewing requests, and broker contact flows.
+> Business workflows for CRM synchronization (Phase 10), Manager/Admin dashboards (Phase 11), and continuous Kaizen improvements (Phase 12) are intentionally NOT implemented in this phase.
+
 
 ---
 

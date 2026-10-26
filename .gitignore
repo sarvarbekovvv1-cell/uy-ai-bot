@@ -65,3 +65,10 @@ postgres_data/
 *.sqlite3
 media/
 uploads/
+.cache/
+
+# Node & Frontend (Mini App)
+node_modules/
+miniapp/node_modules/
+miniapp/dist/
+.npm/

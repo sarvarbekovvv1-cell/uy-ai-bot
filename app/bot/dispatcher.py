@@ -11,6 +11,7 @@ from app.bot.handlers import (
     common_router,
     favorites_router,
     menu_router,
+    miniapp_router,
     my_properties_router,
     property_submission_router,
     registration_router,
@@ -53,6 +54,7 @@ def create_dispatcher() -> Dispatcher:
         settings_router,
         ai_broker_router,
         valuation_router,
+        miniapp_router,
         menu_router,
     ]
     for r in routers:

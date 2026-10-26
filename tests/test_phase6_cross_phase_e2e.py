@@ -554,7 +554,7 @@ async def test_notes_and_followup_lifecycle(
         lead_id=lead.id,
         broker_user_id=broker_id,
         task_type="call",
-        due_at=now + timedelta(hours=3),
+        due_at=now + timedelta(minutes=30),
         note="Call back after 18:00",
     )
     assert task.status == "pending"

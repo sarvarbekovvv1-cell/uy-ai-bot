@@ -7,6 +7,7 @@ from app.bot.handlers.broker_requests import broker_requests_router
 from app.bot.handlers.common import common_router
 from app.bot.handlers.favorites import favorites_router
 from app.bot.handlers.menu import menu_router
+from app.bot.handlers.miniapp import miniapp_router
 from app.bot.handlers.my_properties import my_properties_router
 from app.bot.handlers.property_search import search_router
 from app.bot.handlers.property_submission import property_submission_router
@@ -31,5 +32,6 @@ __all__ = [
     "settings_router",
     "ai_broker_router",
     "valuation_router",
+    "miniapp_router",
     "menu_router",
 ]

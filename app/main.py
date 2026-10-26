@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routes import api_router
@@ -34,6 +35,27 @@ def create_application() -> FastAPI:
         debug=settings.app_debug,
         lifespan=lifespan,
     )
+
+    # Configure CORS narrowly for Telegram Mini App
+    allowed_origins = [o.strip() for o in settings.miniapp_allowed_origins.split(",") if o.strip()]
+    if settings.miniapp_url and settings.miniapp_url not in allowed_origins:
+        allowed_origins.append(settings.miniapp_url)
+
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
+
+    # Security headers middleware
+    @application.middleware("http")
+    async def add_security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
 
     # Global safe error handler - prevents leaking stack traces or internal secrets
     @application.exception_handler(Exception)

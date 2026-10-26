@@ -48,6 +48,17 @@ class Settings(BaseSettings):
     ai_max_history_messages: int = Field(default=6, alias="AI_MAX_HISTORY_MESSAGES")
     ai_max_search_results: int = Field(default=5, alias="AI_MAX_SEARCH_RESULTS")
 
+    # Telegram Mini App Configuration
+    miniapp_url: str = Field(default="", alias="MINIAPP_URL")
+    miniapp_allowed_origins: str = Field(
+        default="http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173",
+        alias="MINIAPP_ALLOWED_ORIGINS",
+    )
+    telegram_init_data_max_age_seconds: int = Field(
+        default=86400, alias="TELEGRAM_INIT_DATA_MAX_AGE_SECONDS"
+    )
+    miniapp_dev_auth_enabled: bool = Field(default=False, alias="MINIAPP_DEV_AUTH_ENABLED")
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:

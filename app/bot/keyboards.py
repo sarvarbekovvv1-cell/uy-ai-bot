@@ -6,9 +6,11 @@ from aiogram.types import (
     KeyboardButton,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
+    WebAppInfo,
 )
 
 from app.bot.locales import LOCALES, get_text
+from app.config import get_settings
 
 MAIN_MENU_BUTTON_KEYS = (
     "btn_buy",
@@ -95,6 +97,15 @@ def get_phone_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
 
 def get_main_menu_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     """Build main customer navigation reply keyboard."""
+    settings = get_settings()
+    if settings.miniapp_url and settings.miniapp_url.startswith("https://"):
+        map_btn = KeyboardButton(
+            text=get_text("btn_map", lang),
+            web_app=WebAppInfo(url=settings.miniapp_url),
+        )
+    else:
+        map_btn = KeyboardButton(text=get_text("btn_map", lang))
+
     return ReplyKeyboardMarkup(
         keyboard=[
             [
@@ -107,7 +118,7 @@ def get_main_menu_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
             ],
             [
                 KeyboardButton(text=get_text("btn_valuation", lang)),
-                KeyboardButton(text=get_text("btn_map", lang)),
+                map_btn,
             ],
             [
                 KeyboardButton(text=get_text("btn_ai_broker", lang)),

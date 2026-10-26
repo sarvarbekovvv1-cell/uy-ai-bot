@@ -111,3 +111,19 @@ class AIBrokerValidationError(AIBrokerError):
 
 class AIBrokerRateLimitError(AIBrokerError):
     """Raised when user exceeds the AI Broker request cooldown."""
+
+
+class TelegramAuthError(AuthorizationError):
+    """Base exception for Telegram Mini App authentication failures."""
+
+
+class TelegramAuthInvalidSignatureError(TelegramAuthError):
+    """Raised when initData signature fails HMAC verification."""
+
+
+class TelegramAuthExpiredError(TelegramAuthError):
+    """Raised when initData auth_date is expired or in the future."""
+
+
+class TelegramAuthMalformedError(TelegramAuthError):
+    """Raised when initData payload is missing required fields or malformed."""
