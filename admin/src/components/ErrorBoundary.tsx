@@ -60,6 +60,7 @@ export class ErrorBoundary extends Component<Props, State> {
           </p>
           <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
             <button
+              data-testid="error-boundary-retry"
               onClick={this.handleReset}
               style={{
                 padding: "8px 18px",
@@ -75,6 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
               Qayta urinish
             </button>
             <button
+              data-testid="error-boundary-reload"
               onClick={() => window.location.reload()}
               style={{
                 padding: "8px 18px",

@@ -2,6 +2,13 @@
  * UyAI Admin Panel TypeScript Interfaces
  */
 
+export type AuthStatus =
+  | "checking"
+  | "authenticated"
+  | "unauthenticated"
+  | "expired"
+  | "error";
+
 export interface StaffUser {
   id: number;
   telegram_id: number;

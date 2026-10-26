@@ -5,19 +5,24 @@ export const LoginPage: React.FC = () => {
   const { login, notice } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password) {
+    if (loading) return; // Prevent double submit
+
+    const cleanUser = username.trim();
+    if (!cleanUser || !password) {
       setError("Foydalanuvchi nomi va parolni kiriting.");
       return;
     }
     setError(null);
     setLoading(true);
+
     try {
-      await login(username.trim(), password);
+      await login(cleanUser, password);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -52,10 +57,13 @@ export const LoginPage: React.FC = () => {
         }}
       >
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#60a5fa" }}>
-            UyAI Boshqaruv
-          </h1>
-          <p style={{ fontSize: "0.875rem", color: "#94a3b8", marginTop: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "4px" }}>
+            <span style={{ fontSize: "1.75rem" }}>🏢</span>
+            <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#60a5fa", margin: 0 }}>
+              UyAI Boshqaruv
+            </h1>
+          </div>
+          <p style={{ fontSize: "0.875rem", color: "#94a3b8", marginTop: "6px" }}>
             Xodimlar va ma'murlar uchun kirish
           </p>
         </div>
@@ -107,6 +115,7 @@ export const LoginPage: React.FC = () => {
               data-testid="username-input"
               type="text"
               autoComplete="username"
+              disabled={loading}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="admin_username"
@@ -119,6 +128,7 @@ export const LoginPage: React.FC = () => {
                 borderRadius: "6px",
                 color: "#f8fafc",
                 fontSize: "0.9rem",
+                boxSizing: "border-box",
               }}
             />
           </div>
@@ -130,25 +140,50 @@ export const LoginPage: React.FC = () => {
             >
               Parol
             </label>
-            <input
-              id="password"
-              data-testid="password-input"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                backgroundColor: "#0f172a",
-                border: "1px solid #475569",
-                borderRadius: "6px",
-                color: "#f8fafc",
-                fontSize: "0.9rem",
-              }}
-            />
+            <div style={{ position: "relative", width: "100%" }}>
+              <input
+                id="password"
+                data-testid="password-input"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                disabled={loading}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                style={{
+                  width: "100%",
+                  padding: "10px 42px 10px 12px",
+                  backgroundColor: "#0f172a",
+                  border: "1px solid #475569",
+                  borderRadius: "6px",
+                  color: "#f8fafc",
+                  fontSize: "0.9rem",
+                  boxSizing: "border-box",
+                }}
+              />
+              <button
+                type="button"
+                data-testid="toggle-password-visibility"
+                aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                disabled={loading}
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: "absolute",
+                  right: "8px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                  padding: "4px",
+                }}
+              >
+                {showPassword ? "🙈" : "👁"}
+              </button>
+            </div>
           </div>
 
           <button

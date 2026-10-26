@@ -24,6 +24,13 @@ import type {
 
 let currentCsrfToken: string | null = null;
 
+export type UnauthorizedHandler = (status: number, message?: string) => void;
+let onUnauthorizedCallback: UnauthorizedHandler | null = null;
+
+export function setOnUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  onUnauthorizedCallback = handler;
+}
+
 export function setCsrfToken(token: string | null): void {
   currentCsrfToken = token;
 }
@@ -44,7 +51,11 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  isRetry = false
+): Promise<T> {
   const method = (options.method || "GET").toUpperCase();
   const headers = new Headers(options.headers || {});
 
@@ -59,14 +70,30 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     }
   }
 
-  const response = await fetch(path, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+  } catch (err) {
+    throw new ApiError(
+      "Server bilan bog‘lanib bo‘lmadi. Qayta urinib ko‘ring.",
+      0,
+      err
+    );
+  }
 
+  // Handle centralized 401: clear token and notify session listener (unless it's a login attempt)
   if (response.status === 401) {
     currentCsrfToken = null;
+    if (
+      !path.includes("/api/admin/v1/auth/login") &&
+      !path.includes("/api/admin/v1/auth/logout")
+    ) {
+      onUnauthorizedCallback?.(401, "Sessiya tugagan. Qayta kiring.");
+    }
   }
 
   const contentType = response.headers.get("content-type");
@@ -77,6 +104,41 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     } catch {
       body = null;
     }
+  }
+
+  // Handle 403 CSRF failure: attempt single refresh via /auth/me and retry mutating request once
+  const isCsrfError =
+    response.status === 403 &&
+    body &&
+    typeof body === "object" &&
+    "detail" in body &&
+    typeof (body as { detail: unknown }).detail === "string" &&
+    (body as { detail: string }).detail.toLowerCase().includes("csrf");
+
+  if (isCsrfError && !isRetry && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    try {
+      const meRes = await fetch("/api/admin/v1/auth/me", {
+        credentials: "include",
+      });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData?.csrf_token) {
+          setCsrfToken(meData.csrf_token);
+          return await request<T>(path, options, true);
+        }
+      }
+    } catch {
+      // Fall through to standard error throw below
+    }
+  }
+
+  // Handle 429 rate limiting with friendly message
+  if (response.status === 429) {
+    throw new ApiError(
+      "Juda ko‘p urinish. Birozdan keyin qayta urinib ko‘ring.",
+      429,
+      body
+    );
   }
 
   if (!response.ok) {
@@ -98,12 +160,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const adminApi = {
   // --- Auth ---
   async login(username: string, password: string): Promise<LoginResponse> {
-    const res = await request<LoginResponse>("/api/admin/v1/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username, password }),
-    });
-    setCsrfToken(res.csrf_token);
-    return res;
+    try {
+      const res = await request<LoginResponse>("/api/admin/v1/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      });
+      setCsrfToken(res.csrf_token);
+      return res;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        throw new ApiError("Login yoki parol noto‘g‘ri.", 401, err.data);
+      }
+      throw err;
+    }
   },
 
   async logout(): Promise<void> {

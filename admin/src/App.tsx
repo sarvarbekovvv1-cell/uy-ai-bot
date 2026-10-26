@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "./auth/AuthContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminLayout, type AdminTab } from "./layouts/AdminLayout";
@@ -14,42 +14,156 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { ViewingsPage } from "./pages/ViewingsPage";
 
+const VALID_TABS: AdminTab[] = [
+  "dashboard",
+  "properties",
+  "leads",
+  "viewings",
+  "brokers",
+  "users",
+  "crm",
+  "kaizen",
+  "audit",
+  "settings",
+];
+
+function getTabFromPathname(): AdminTab {
+  if (typeof window === "undefined") return "dashboard";
+  const path = window.location.pathname.replace(/\/+$/, "").replace(/^\//, "");
+  if (VALID_TABS.includes(path as AdminTab)) {
+    return path as AdminTab;
+  }
+  return "dashboard";
+}
+
 export const App: React.FC = () => {
-  const { user, loading, hasPerm } = useAuth();
-  const [currentTab, setCurrentTab] = useState<AdminTab>("dashboard");
+  const { status, user, checkSession, hasPerm } = useAuth();
+  const [currentTab, setCurrentTab] = useState<AdminTab>(getTabFromPathname);
   const [filterBrokerId, setFilterBrokerId] = useState<number | undefined>(undefined);
 
-  if (loading) {
+  // Sync route on popstate (browser back/forward)
+  useEffect(() => {
+    const handlePopState = () => {
+      const tab = getTabFromPathname();
+      setCurrentTab(tab);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // Update browser history when tab changes
+  const handleSelectTab = (tab: AdminTab) => {
+    setCurrentTab(tab);
+    if (typeof window !== "undefined") {
+      const targetPath = tab === "dashboard" ? "/dashboard" : `/${tab}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({}, "", targetPath);
+      }
+    }
+  };
+
+  // If authenticated user lands on /login, redirect to /dashboard
+  useEffect(() => {
+    if (status === "authenticated" && typeof window !== "undefined") {
+      if (window.location.pathname === "/login") {
+        window.history.replaceState({}, "", "/dashboard");
+        setCurrentTab("dashboard");
+      }
+    }
+  }, [status]);
+
+  // 1. Initial State: Checking session
+  if (status === "checking") {
     return (
       <div
+        data-testid="auth-checking"
         style={{
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           minHeight: "100vh",
+          backgroundColor: "#0f172a",
           color: "#94a3b8",
           fontSize: "1rem",
+          gap: "16px",
         }}
       >
-        Tizim ma'lumotlari tekshirilmoqda...
+        <div
+          style={{
+            width: "36px",
+            height: "36px",
+            border: "3px solid #334155",
+            borderTopColor: "#3b82f6",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <p style={{ margin: 0 }}>Sessiya tekshirilmoqda...</p>
       </div>
     );
   }
 
-  if (!user) {
+  // 2. Server connection error state
+  if (status === "error") {
+    return (
+      <div
+        data-testid="auth-error"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          backgroundColor: "#0f172a",
+          color: "#f87171",
+          padding: "24px",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>⚠️</div>
+        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: "0 0 8px 0" }}>
+          Server bilan bog‘lanib bo‘lmadi
+        </h2>
+        <p style={{ color: "#94a3b8", margin: "0 0 20px 0", fontSize: "0.9rem", maxWidth: "360px" }}>
+          Tarmoq aloqasini tekshiring yoki birozdan so‘ng qayta urinib ko‘ring.
+        </p>
+        <button
+          data-testid="auth-retry-btn"
+          onClick={checkSession}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#3b82f6",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: "0.9rem",
+          }}
+        >
+          Qayta urinish
+        </button>
+      </div>
+    );
+  }
+
+  // 3. Unauthenticated or Expired state
+  if (status === "unauthenticated" || status === "expired" || !user) {
     return <LoginPage />;
   }
 
+  // 4. Authenticated state
   const handleSelectBroker = (brokerId: number) => {
     setFilterBrokerId(brokerId);
-    setCurrentTab("leads");
+    handleSelectTab("leads");
   };
 
   const renderContent = () => {
     switch (currentTab) {
       case "dashboard":
         return hasPerm("dashboard.view") ? (
-          <DashboardPage onNavigate={(tab) => setCurrentTab(tab)} />
+          <DashboardPage onNavigate={handleSelectTab} />
         ) : (
           <ForbiddenMessage />
         );
@@ -85,7 +199,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <AdminLayout currentTab={currentTab} onSelectTab={setCurrentTab}>
+    <AdminLayout currentTab={currentTab} onSelectTab={handleSelectTab}>
       <ErrorBoundary key={currentTab}>
         {renderContent()}
       </ErrorBoundary>
@@ -94,10 +208,10 @@ export const App: React.FC = () => {
 };
 
 const ForbiddenMessage: React.FC = () => (
-  <div style={{ padding: "40px", textAlign: "center", color: "#f87171" }}>
+  <div data-testid="forbidden-message" style={{ padding: "40px", textAlign: "center", color: "#f87171" }}>
     <h2>Ruxsat berilmagan (403 Forbidden)</h2>
     <p style={{ marginTop: "8px", color: "#94a3b8" }}>
-      Sizning rolingizda ushbu bo'limni ko'rish huquqi mavjud emas.
+      Bu bo‘limga kirish uchun ruxsatingiz yo‘q.
     </p>
   </div>
 );
