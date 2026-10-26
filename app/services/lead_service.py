@@ -385,6 +385,59 @@ class LeadService:
         logger.info("Broker id=%d claimed lead id=%d", broker_user_id, lead_id)
         return updated
 
+    async def assign_broker(
+        self,
+        session: AsyncSession,
+        *,
+        lead_id: int,
+        broker_user_id: int,
+        assigned_by_user_id: int,
+    ) -> Lead:
+        """Assign or reassign a lead to a broker by manager."""
+        lead = await self.lead_repo.get_by_id(session, lead_id)
+        if not lead:
+            raise LeadNotFoundError("Lead topilmadi.")
+
+        target_broker = await self.user_repo.get_by_id(session, broker_user_id)
+        if not target_broker or not target_broker.is_active:
+            raise LeadValidationError("Yaroqsiz broker tanlandi.")
+
+        allowed_types = await self.get_broker_allowed_listing_types(session, broker_user_id)
+        if lead.property.listing_type not in allowed_types:
+            raise LeadPermissionError(
+                f"Tanlangan broker '{lead.property.listing_type}' toifasidagi e'lonlarni "
+                "boshqarish huquqiga ega emas."
+            )
+
+        old_broker_id = lead.broker_user_id
+        now = datetime.now(UTC)
+        updated = await self.lead_repo.update(
+            session,
+            lead_id,
+            broker_user_id=broker_user_id,
+            assigned_at=now,
+        )
+        if not updated:
+            raise LeadNotFoundError("Lead topilmadi.")
+
+        await self.lead_repo.create_event(
+            session,
+            lead_id=lead_id,
+            actor_user_id=assigned_by_user_id,
+            event_type="assigned",
+            old_value=str(old_broker_id) if old_broker_id else None,
+            new_value=str(broker_user_id),
+        )
+
+        logger.info(
+            "Lead id=%d reassigned from broker %s to broker %d by user %d",
+            lead_id,
+            old_broker_id,
+            broker_user_id,
+            assigned_by_user_id,
+        )
+        return updated
+
     async def update_stage(
         self,
         session: AsyncSession,

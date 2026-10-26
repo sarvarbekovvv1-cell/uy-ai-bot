@@ -67,8 +67,10 @@ media/
 uploads/
 .cache/
 
-# Node & Frontend (Mini App)
+# Node & Frontend (Mini App & Admin)
 node_modules/
 miniapp/node_modules/
 miniapp/dist/
+admin/node_modules/
+admin/dist/
 .npm/

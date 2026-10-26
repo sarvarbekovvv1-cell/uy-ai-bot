@@ -36,16 +36,22 @@ def create_application() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Configure CORS narrowly for Telegram Mini App
+    # Configure CORS narrowly for Telegram Mini App and Admin Panel
     allowed_origins = [o.strip() for o in settings.miniapp_allowed_origins.split(",") if o.strip()]
     if settings.miniapp_url and settings.miniapp_url not in allowed_origins:
         allowed_origins.append(settings.miniapp_url)
+
+    for admin_origin in settings.get_admin_allowed_origins():
+        if admin_origin not in allowed_origins:
+            allowed_origins.append(admin_origin)
+    if settings.admin_url and settings.admin_url not in allowed_origins:
+        allowed_origins.append(settings.admin_url)
 
     application.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 
@@ -55,6 +61,7 @@ def create_application() -> FastAPI:
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["X-Frame-Options"] = "DENY"
         return response
 
     # Global safe error handler - prevents leaking stack traces or internal secrets

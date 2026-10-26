@@ -40,12 +40,58 @@ npm run build
 
 ---
 
+## Admin / Manager Panel (Phase 11)
+
+UyAI includes a dedicated, production-grade Staff Admin and Manager Panel located in `admin/`.
+
+### Architecture
+- **Backend**: FastAPI endpoints mounted under `/api/admin/v1/` (`/auth`, `/dashboard`, `/properties`, `/users`, `/brokers`, `/leads`, `/viewings`, `/crm`, `/audit`).
+- **Staff Security & Authentication**:
+  - OWASP-compliant `scrypt` password hashing (`N=16384, r=8, p=1`, 32-byte salt).
+  - Secure `HttpOnly`, `SameSite=Lax` session cookies with server-side token hashing (`admin_sessions`).
+  - Cryptographic `X-CSRF-Token` validation on all mutating HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`).
+  - Anti-brute-force account lockout after 5 consecutive failed login attempts.
+  - Strict vertical RBAC matrix with default-deny for customer accounts (`buyer`, `tenant`, `property_owner`).
+  - Horizontal lead isolation: standard brokers are strictly restricted to their assigned leads, while managers (`head_broker`, `superadmin`) manage the full pipeline.
+  - Immutable administrative audit trail (`admin_audit_events`) logging all staff actions (logins, moderations, lead transitions, viewings, role changes).
+- **Frontend**: Clean React 18 + TypeScript + Vite single-page application in `admin/` with role-aware navigation, metrics dashboard, property moderation, lead stage pipeline, CRM outbox monitoring/retry, and user role controls.
+
+### Configuration
+```env
+ADMIN_URL=https://admin.uyai.uz
+ADMIN_ALLOWED_ORIGINS=["https://admin.uyai.uz","http://localhost:5174"]
+ADMIN_SESSION_MAX_AGE_SECONDS=43200
+ADMIN_SESSION_COOKIE_NAME=uyai_admin_session
+ADMIN_SESSION_COOKIE_SECURE=false
+ADMIN_SESSION_SECRET=your_super_secret_session_key
+```
+
+### Staff Bootstrapping CLI
+To initialize or update the initial superadmin or staff account:
+```bash
+.venv/bin/python scripts/bootstrap_admin.py --telegram-id 123456789 --username admin --password "StrongPassword123!" --role superadmin
+```
+
+### Running Admin Frontend Locally
+```bash
+cd admin
+npm install
+npm run dev
+```
+For production build:
+```bash
+cd admin
+npm run build
+```
+
+---
+
 ## Current Development Phase
 
-> **Current Phase: Phase 9 — Telegram Mini App + Interactive Property Map**
+> **Current Phase: Phase 11 — Admin / Manager Panel**
 >
-> **Notice:** Complete Mini App frontend and backend implemented with cryptographic authentication, interactive Leaflet map, property feed, filters, favorites, viewing requests, and broker contact flows.
-> Business workflows for CRM synchronization (Phase 10), Manager/Admin dashboards (Phase 11), and continuous Kaizen improvements (Phase 12) are intentionally NOT implemented in this phase.
+> **Notice:** Dedicated Staff Admin / Manager Web application and backend APIs implemented with scrypt authentication, CSRF protection, granular RBAC, property moderation, lead management with horizontal broker isolation, viewing lifecycle controls, CRM outbox monitoring/retry, and immutable audit logging.
+> Phase 12 (Kaizen / PDCA / AI management recommendations) and Phase 13 (final deployment) are intentionally NOT started in this phase.
 
 
 ---

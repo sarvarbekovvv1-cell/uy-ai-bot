@@ -1,5 +1,6 @@
 """SQLAlchemy database models for UyAI."""
 
+from app.models.admin_auth import AdminAuditEvent, AdminSession, StaffCredential
 from app.models.crm_sync import (
     CRM_EVENT_STATUSES,
     CRM_PROVIDERS,
@@ -73,4 +74,7 @@ __all__ = [
     "CRMEntityLink",
     "CRM_EVENT_STATUSES",
     "CRM_PROVIDERS",
+    "StaffCredential",
+    "AdminSession",
+    "AdminAuditEvent",
 ]

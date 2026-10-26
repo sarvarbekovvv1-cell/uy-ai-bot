@@ -80,6 +80,26 @@ class Settings(BaseSettings):
     amocrm_stage_mapping_json: str = Field(default="", alias="AMOCRM_STAGE_MAPPING_JSON")
     amocrm_broker_mapping_json: str = Field(default="", alias="AMOCRM_BROKER_MAPPING_JSON")
 
+    # Admin Panel Configuration
+    admin_url: str = Field(default="http://localhost:5174", alias="ADMIN_URL")
+    admin_allowed_origins: str = Field(
+        default="http://localhost:5174,http://127.0.0.1:5174", alias="ADMIN_ALLOWED_ORIGINS"
+    )
+    admin_session_max_age_seconds: int = Field(default=28800, alias="ADMIN_SESSION_MAX_AGE_SECONDS")
+    admin_session_cookie_name: str = Field(
+        default="uyai_admin_session", alias="ADMIN_SESSION_COOKIE_NAME"
+    )
+    admin_session_cookie_secure: bool = Field(
+        default=False, alias="ADMIN_SESSION_COOKIE_SECURE"
+    )
+    admin_session_secret: str = Field(default="", alias="ADMIN_SESSION_SECRET")
+
+    def get_admin_allowed_origins(self) -> list[str]:
+        """Return list of allowed CORS origins for Admin Panel."""
+        if not self.admin_allowed_origins:
+            return []
+        return [o.strip() for o in self.admin_allowed_origins.split(",") if o.strip()]
+
     def get_effective_amocrm_base_url(self) -> str:
         """Return canonical amoCRM base URL without trailing slash."""
         if self.amocrm_base_url and self.amocrm_base_url.strip():
