@@ -20,6 +20,7 @@ from app.services.admin_rbac import (
     get_staff_permissions,
     verify_csrf_token,
 )
+from app.services.rate_limiter import rate_limit
 
 logger = get_logger(__name__)
 
@@ -33,6 +34,7 @@ async def login(
     body: StaffLoginRequest,
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
+    _: None = Depends(rate_limit("admin_login", max_requests=10, window_seconds=60)),
 ) -> StaffUserResponse:
     """Authenticate staff user and issue HttpOnly session cookie."""
     auth_service = AdminAuthService(settings)

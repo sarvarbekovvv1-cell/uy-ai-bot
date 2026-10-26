@@ -41,6 +41,7 @@ from app.schemas.miniapp import (
     MiniAppViewingRequestResponse,
 )
 from app.services.favorite_service import FavoriteService
+from app.services.media_storage import get_media_storage
 from app.services.property_search_service import PropertySearchService
 from app.services.viewing_request_service import ViewingRequestService
 
@@ -390,31 +391,22 @@ async def get_property_media_by_uid(
     media_unique_id: str,
 ) -> Response:
     """Stream property media by unique identifier with caching and path traversal protection."""
-    safe_uid = re.sub(r"[^a-zA-Z0-9_-]", "", media_unique_id)
-    if not safe_uid:
+    storage = get_media_storage()
+    item = storage.get_media(media_unique_id)
+    if not item:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": {"code": "INVALID_MEDIA", "message": "Invalid media identifier"}},
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": {"code": "MEDIA_NOT_FOUND", "message": "Media not found"}},
         )
 
-    for ext in (".jpg", ".png", ".webp"):
-        candidate = os.path.abspath(os.path.join(MEDIA_CACHE_DIR, f"{safe_uid}{ext}"))
-        if candidate.startswith(os.path.abspath(MEDIA_CACHE_DIR)) and os.path.exists(candidate):
-            with open(candidate, "rb") as f:
-                data = f.read()
-            mime = "image/jpeg" if ext == ".jpg" else "image/png" if ext == ".png" else "image/webp"
-            return Response(
-                content=data,
-                media_type=mime,
-                headers={
-                    "Cache-Control": "public, max-age=86400",
-                    "X-Content-Type-Options": "nosniff",
-                },
-            )
-
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail={"error": {"code": "MEDIA_NOT_FOUND", "message": "Media not found"}},
+    data, mime = item
+    return Response(
+        content=data,
+        media_type=mime,
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

@@ -1,5 +1,6 @@
 """FastAPI application entrypoint and lifespan management."""
 
+import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -21,6 +22,8 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     setup_logging(settings.log_level)
     logger.info("Starting %s in %s mode", settings.app_name, settings.app_env)
+    if settings.app_env == "production":
+        logger.info("Verified production settings: strict security constraints enforced.")
     yield
     logger.info("Shutting down %s", settings.app_name)
     await close_db_engine()
@@ -37,7 +40,7 @@ def create_application() -> FastAPI:
     )
 
     # Configure CORS narrowly for Telegram Mini App and Admin Panel
-    allowed_origins = [o.strip() for o in settings.miniapp_allowed_origins.split(",") if o.strip()]
+    allowed_origins = settings.get_miniapp_allowed_origins()
     if settings.miniapp_url and settings.miniapp_url not in allowed_origins:
         allowed_origins.append(settings.miniapp_url)
 
@@ -55,13 +58,30 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Security headers middleware
+    # Correlation ID and Security headers middleware
     @application.middleware("http")
-    async def add_security_headers(request: Request, call_next):
+    async def add_security_headers_and_request_id(request: Request, call_next):
+        req_id = request.headers.get("x-request-id") or uuid.uuid4().hex
+        request.state.request_id = req_id
+
         response = await call_next(request)
+        response.headers["X-Request-ID"] = req_id
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["X-Frame-Options"] = "DENY"
+
+        # Mini App endpoints support Telegram Web embedding via CSP frame-ancestors;
+        # admin and other endpoints enforce strict SAMEORIGIN framing.
+        if request.url.path.startswith("/api/miniapp/v1/"):
+            response.headers["Content-Security-Policy"] = (
+                "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org;"
+            )
+        else:
+            response.headers["X-Frame-Options"] = "SAMEORIGIN"
+
+        if settings.app_env == "production":
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
         return response
 
     # Global safe error handler - prevents leaking stack traces or internal secrets

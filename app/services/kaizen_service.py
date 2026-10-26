@@ -1,8 +1,6 @@
 """Kaizen PDCA (Plan-Do-Check-Act) Cycle Lifecycle Management Service."""
 
 import json
-import os
-import time
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
@@ -21,6 +19,7 @@ from app.models.kaizen import (
 from app.models.property_media import PropertyMedia
 from app.services.admin_auth_service import AdminAuthService
 from app.services.kaizen_analytics_service import KaizenAnalyticsService
+from app.services.media_storage import get_media_storage
 
 logger = get_logger(__name__)
 
@@ -420,39 +419,9 @@ class KaizenService:
         max_age_hours: int = 24,
     ) -> int:
         """Find and remove unreferenced uploaded files older than max_age_hours."""
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        cache_dir = os.path.join(base_dir, ".cache", "media")
-        if not os.path.exists(cache_dir):
-            return 0
-
         active_uids_stmt = select(PropertyMedia.telegram_file_unique_id).where(
             PropertyMedia.telegram_file_unique_id.is_not(None)
         )
         active_uids = set((await session.execute(active_uids_stmt)).scalars().all())
-
-        now = time.time()
-        age_limit = max_age_hours * 3600
-        removed_count = 0
-
-        for entry in os.listdir(cache_dir):
-            if not entry.startswith("admin_media_"):
-                continue
-
-            entry_path = os.path.join(cache_dir, entry)
-            if not os.path.isfile(entry_path):
-                continue
-
-            mtime = os.path.getmtime(entry_path)
-            if now - mtime < age_limit:
-                continue
-
-            uid = os.path.splitext(entry)[0]
-            if uid not in active_uids:
-                try:
-                    os.remove(entry_path)
-                    removed_count += 1
-                    logger.info("Cleaned up orphan media file: %s", entry)
-                except OSError as err:
-                    logger.warning("Failed to remove orphan media %s: %s", entry, err)
-
-        return removed_count
+        storage = get_media_storage()
+        return storage.cleanup_orphans(active_uids, max_age_hours)

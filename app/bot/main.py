@@ -42,14 +42,15 @@ async def start_bot() -> None:
         logger.error("Failed to initialize bot: %s", e)
         sys.exit(1)
 
-    # Initialize tables and system roles if needed
+    # Initialize tables in non-production (in production, use Alembic)
     from app.database.base import Base
-    from app.database.session import get_engine, get_session_factory
+    from app.database.session import close_db_engine, get_engine, get_session_factory
     from app.repositories.role_repository import RoleRepository
 
-    engine = get_engine()
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    if settings.app_env != "production":
+        engine = get_engine()
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
     session_factory = get_session_factory()
     async with session_factory() as session:
@@ -64,7 +65,8 @@ async def start_bot() -> None:
         await dispatcher.start_polling(bot, drop_pending_updates=True)
     finally:
         await bot.session.close()
-        logger.info("Telegram bot polling stopped.")
+        await close_db_engine()
+        logger.info("Telegram bot polling stopped and database connections closed.")
 
 
 if __name__ == "__main__":

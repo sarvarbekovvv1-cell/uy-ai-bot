@@ -3,7 +3,6 @@
 import base64
 import os
 import re
-import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -35,7 +34,9 @@ from app.services.admin_rbac import (
     require_permission,
     verify_csrf_token,
 )
+from app.services.media_storage import get_media_storage
 from app.services.property_service import PropertyService
+from app.services.rate_limiter import rate_limit
 
 logger = get_logger(__name__)
 
@@ -216,7 +217,7 @@ async def approve_property(
     if not prop:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found.")
 
-    if prop.status not in ("pending_approval", "rejected", "draft"):
+    if prop.status not in ("pending_approval", "submitted", "under_review", "rejected", "draft"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot approve property in '{prop.status}' status.",
@@ -259,7 +260,7 @@ async def reject_property(
     if not prop:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found.")
 
-    if prop.status not in ("pending_approval", "approved", "draft"):
+    if prop.status not in ("pending_approval", "submitted", "under_review", "approved", "draft"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot reject property in '{prop.status}' status.",
@@ -337,6 +338,7 @@ async def upload_property_media(
     request: Request,
     staff_user: User = Depends(require_permission(PERM_PROPERTIES_CREATE)),
     _: None = Depends(verify_csrf_token),
+    __: None = Depends(rate_limit("media_upload", max_requests=30, window_seconds=60)),
 ) -> dict[str, str]:
     """Upload property photo with MIME and magic bytes security checks."""
     content_type_header = request.headers.get("content-type", "").lower()
@@ -356,64 +358,14 @@ async def upload_property_media(
         mime_type = content_type_header.split(";")[0].strip()
         content = await request.body()
 
-    if mime_type not in ALLOWED_MIME_TYPES:
-        allowed_str = ", ".join(sorted(ALLOWED_MIME_TYPES))
+    storage = get_media_storage()
+    try:
+        safe_uid = storage.save_media(content, mime_type)
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file type '{mime_type}'. Allowed types: {allowed_str}",
-        )
-
-    if not content:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file is empty.",
-        )
-
-    if len(content) > MAX_IMAGE_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File exceeds maximum allowed size of {MAX_IMAGE_BYTES // (1024 * 1024)}MB.",
-        )
-
-    # Exact magic byte inspection matching specific MIME type
-    is_valid_magic = False
-    ext = ".jpg"
-    if mime_type == "image/jpeg" and content.startswith(b"\xff\xd8\xff"):
-        is_valid_magic = True
-        ext = ".jpg"
-    elif mime_type == "image/png" and content.startswith(b"\x89PNG\r\n\x1a\n"):
-        is_valid_magic = True
-        ext = ".png"
-    elif (
-        mime_type == "image/webp"
-        and content.startswith(b"RIFF")
-        and len(content) > 12
-        and content[8:12] == b"WEBP"
-    ):
-        is_valid_magic = True
-        ext = ".webp"
-
-    if not is_valid_magic:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "File content does not match expected image signature (magic bytes) "
-                "for declared MIME type."
-            ),
-        )
-
-    safe_uid = f"admin_media_{uuid.uuid4().hex}"
-    filename = f"{safe_uid}{ext}"
-    dest_path = os.path.abspath(os.path.join(MEDIA_CACHE_DIR, filename))
-
-    if not dest_path.startswith(os.path.abspath(MEDIA_CACHE_DIR)):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid destination path traversal detected.",
-        )
-
-    with open(dest_path, "wb") as f:
-        f.write(content)
+            detail=str(e),
+        ) from e
 
     logger.info("Media %s uploaded by staff user_id=%d", safe_uid, staff_user.id)
 
@@ -430,29 +382,23 @@ async def get_uploaded_media(
     _: User = Depends(require_permission(PERM_PROPERTIES_VIEW)),
 ) -> Response:
     """Stream uploaded media for preview in Admin panel with path traversal protection."""
-    safe_uid = re.sub(r"[^a-zA-Z0-9_-]", "", media_unique_id)
-    if not safe_uid:
+    storage = get_media_storage()
+    item = storage.get_media(media_unique_id)
+    if not item:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid media identifier",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Media not found.",
         )
 
-    for ext in (".jpg", ".png", ".webp"):
-        candidate = os.path.abspath(os.path.join(MEDIA_CACHE_DIR, f"{safe_uid}{ext}"))
-        if candidate.startswith(os.path.abspath(MEDIA_CACHE_DIR)) and os.path.exists(candidate):
-            with open(candidate, "rb") as f:
-                data = f.read()
-            mime = "image/jpeg" if ext == ".jpg" else "image/png" if ext == ".png" else "image/webp"
-            return Response(
-                content=data,
-                media_type=mime,
-                headers={
-                    "Cache-Control": "public, max-age=86400",
-                    "X-Content-Type-Options": "nosniff",
-                },
-            )
-
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found.")
+    data, mime = item
+    return Response(
+        content=data,
+        media_type=mime,
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post("", response_model=AdminPropertyDetail, status_code=status.HTTP_201_CREATED)

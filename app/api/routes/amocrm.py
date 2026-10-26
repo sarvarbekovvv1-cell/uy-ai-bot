@@ -13,6 +13,7 @@ from app.integrations.amocrm.service import AmoCRMService
 from app.logging import get_logger
 from app.models.lead import LEAD_STAGES, Lead
 from app.services.lead_service import LeadService
+from app.services.rate_limiter import rate_limit
 
 logger = get_logger(__name__)
 
@@ -70,6 +71,7 @@ async def enforce_max_body_size(request: Request) -> None:
 async def handle_amocrm_webhook(
     request: Request,
     _: None = Depends(verify_webhook_secret),
+    __: None = Depends(rate_limit("amocrm_webhook", max_requests=120, window_seconds=60)),
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:

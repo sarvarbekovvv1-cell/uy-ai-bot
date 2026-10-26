@@ -33,6 +33,7 @@ from app.services.admin_rbac import (
 from app.services.kaizen_analytics_service import KaizenAnalyticsService, KaizenDateRange
 from app.services.kaizen_recommendation_service import KaizenRecommendationService
 from app.services.kaizen_service import KaizenService
+from app.services.rate_limiter import rate_limit
 
 logger = get_logger(__name__)
 
@@ -152,6 +153,7 @@ async def generate_recommendations(
     session: AsyncSession = Depends(get_db_session),
     staff_user: User = Depends(require_permission(PERM_KAIZEN_GENERATE)),
     _: None = Depends(verify_csrf_token),
+    __: None = Depends(rate_limit("kaizen_generate", max_requests=10, window_seconds=60)),
 ) -> list[KaizenRecommendationItem]:
     """Trigger recommendation engine combining deterministic rules and Gemini advisor."""
     try:

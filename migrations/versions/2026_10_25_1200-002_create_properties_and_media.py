@@ -22,7 +22,12 @@ def upgrade() -> None:
     # 1. Create 'properties' table
     op.create_table(
         "properties",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column(
+            "id",
+            sa.BigInteger().with_variant(sa.Integer(), "sqlite"),
+            autoincrement=True,
+            nullable=False,
+        ),
         sa.Column("owner_user_id", sa.BigInteger(), nullable=False),
         sa.Column("listing_type", sa.String(length=20), nullable=False),
         sa.Column("property_type", sa.String(length=30), nullable=False),

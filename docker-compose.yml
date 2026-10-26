@@ -1,3 +1,8 @@
+# =============================================================================
+# UyAI Production Docker Compose Stack
+# =============================================================================
+version: "3.8"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -6,9 +11,7 @@ services:
     environment:
       POSTGRES_DB: ${DATABASE_NAME:-uyai_db}
       POSTGRES_USER: ${DATABASE_USER:-uyai_user}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-uyai_password}
-    ports:
-      - "${DATABASE_PORT:-5432}:5432"
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,7 +19,92 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    networks:
+      - uyai_internal
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uyai_api
+    restart: unless-stopped
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      DATABASE_URL: postgresql+asyncpg://${DATABASE_USER:-uyai_user}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME:-uyai_db}
+      MEDIA_STORAGE_DIR: /var/lib/uyai/media
+    volumes:
+      - media_data:/var/lib/uyai/media
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - uyai_internal
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uyai_bot
+    restart: unless-stopped
+    command: ["python3", "-m", "app.bot.main"]
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DATABASE_URL: postgresql+asyncpg://${DATABASE_USER:-uyai_user}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME:-uyai_db}
+      MEDIA_STORAGE_DIR: /var/lib/uyai/media
+    volumes:
+      - media_data:/var/lib/uyai/media
+    networks:
+      - uyai_internal
+
+  crm_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uyai_crm_worker
+    restart: unless-stopped
+    command: ["python3", "scripts/run_crm_worker.py"]
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DATABASE_URL: postgresql+asyncpg://${DATABASE_USER:-uyai_user}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME:-uyai_db}
+      MEDIA_STORAGE_DIR: /var/lib/uyai/media
+    volumes:
+      - media_data:/var/lib/uyai/media
+    networks:
+      - uyai_internal
 
 volumes:
   postgres_data:
-    name: uyai_postgres_data
+    driver: local
+  media_data:
+    driver: local
+
+networks:
+  uyai_internal:
+    driver: bridge

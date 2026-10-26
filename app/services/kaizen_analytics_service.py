@@ -63,6 +63,15 @@ class KaizenAnalyticsService:
             return None
         return round((float(numerator) / float(denominator)) * 100.0, 2)
 
+    @staticmethod
+    def _to_utc(dt: datetime | None) -> datetime | None:
+        """Ensure datetime is UTC timezone-aware for safe cross-database comparisons."""
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=UTC)
+        return dt.astimezone(UTC)
+
     @classmethod
     async def get_kpi_overview(
         cls,
@@ -231,13 +240,17 @@ class KaizenAnalyticsService:
                     candidates.append(fu.completed_at)
 
             # Strict bounds check: lead.created_at <= contact <= now_utc
+            lead_created = cls._to_utc(lead_item.created_at)
             valid_contacts = [
-                ts for ts in candidates
-                if ts is not None and lead_item.created_at <= ts <= now_utc
+                c
+                for ts in candidates
+                if (c := cls._to_utc(ts)) is not None
+                and lead_created is not None
+                and lead_created <= c <= now_utc
             ]
-            if valid_contacts:
+            if valid_contacts and lead_created is not None:
                 first_contact = min(valid_contacts)
-                diff = (first_contact - lead_item.created_at).total_seconds()
+                diff = (first_contact - lead_created).total_seconds()
                 if diff >= 0:
                     durations_sec.append(diff)
 

@@ -21,7 +21,12 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "favorites",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column(
+            "id",
+            sa.BigInteger().with_variant(sa.Integer(), "sqlite"),
+            autoincrement=True,
+            nullable=False,
+        ),
         sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("property_id", sa.BigInteger(), nullable=False),
         sa.Column(

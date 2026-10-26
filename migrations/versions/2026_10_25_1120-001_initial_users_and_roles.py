@@ -32,7 +32,12 @@ def upgrade() -> None:
     # 2. Create 'users' table
     op.create_table(
         "users",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column(
+            "id",
+            sa.BigInteger().with_variant(sa.Integer(), "sqlite"),
+            autoincrement=True,
+            nullable=False,
+        ),
         sa.Column("telegram_id", sa.BigInteger(), nullable=False),
         sa.Column("username", sa.String(length=100), nullable=True),
         sa.Column("first_name", sa.String(length=150), nullable=True),

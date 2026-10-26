@@ -14,6 +14,7 @@ from app.bot.keyboards import (
     get_property_details_keyboard,
 )
 from app.bot.locales import LOCALES, get_text
+from app.config import get_settings
 from app.core.exceptions import PropertyNotFoundError
 from app.logging import get_logger
 from app.models.property import Property
@@ -22,9 +23,6 @@ from app.services.property_search_service import PropertySearchService
 from app.services.user_service import UserService
 
 logger = get_logger(__name__)
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-MEDIA_CACHE_DIR = os.path.join(BASE_DIR, ".cache", "media")
 
 favorites_router = Router(name="favorites")
 
@@ -35,6 +33,15 @@ FAVORITES_BUTTONS = {
 }
 
 
+def get_media_cache_dir() -> str:
+    """Return absolute path to configured media storage directory."""
+    settings = get_settings()
+    if os.path.isabs(settings.media_storage_dir):
+        return settings.media_storage_dir
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    return os.path.abspath(os.path.join(base_dir, settings.media_storage_dir))
+
+
 def resolve_property_photo(photo_item: Any) -> Any:
     """Resolve photo item into either Telegram file_id or local FSInputFile."""
     if not photo_item:
@@ -43,8 +50,9 @@ def resolve_property_photo(photo_item: Any) -> Any:
     if file_id and file_id.startswith("admin_file_"):
         uid = getattr(photo_item, "telegram_file_unique_id", None)
         if uid:
+            storage_dir = get_media_cache_dir()
             for ext in (".jpg", ".png", ".webp"):
-                candidate = os.path.join(MEDIA_CACHE_DIR, f"{uid}{ext}")
+                candidate = os.path.join(storage_dir, f"{uid}{ext}")
                 if os.path.exists(candidate):
                     return FSInputFile(candidate)
     return file_id

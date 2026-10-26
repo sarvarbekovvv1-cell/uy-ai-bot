@@ -13,10 +13,11 @@ import sys
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.database.session import get_session_factory
-from app.models.role import Role
+from app.models.role import Role, UserRole
 from app.models.user import User
 from app.services.admin_auth_service import AdminAuthService
 
@@ -33,9 +34,10 @@ async def bootstrap_staff_account(
     """Safely bootstrap or promote a user to staff."""
     user = None
     if user_id:
-        user = await session.get(User, user_id)
+        stmt = select(User).options(selectinload(User.roles)).where(User.id == user_id)
+        user = (await session.execute(stmt)).scalar_one_or_none()
     elif telegram_id:
-        stmt = select(User).where(User.telegram_id == telegram_id)
+        stmt = select(User).options(selectinload(User.roles)).where(User.telegram_id == telegram_id)
         user = (await session.execute(stmt)).scalar_one_or_none()
 
     if not user:
@@ -51,8 +53,6 @@ async def bootstrap_staff_account(
             is_verified=True,
         )
         session.add(user)
-        await session.flush()
-        print(f"Created new user id={user.id} for telegram_id={telegram_id}")
 
     # Ensure role exists and assign
     role_stmt = select(Role).where(Role.name == role_name)
@@ -62,8 +62,15 @@ async def bootstrap_staff_account(
         session.add(role)
         await session.flush()
 
-    if role not in user.roles:
-        user.roles.append(role)
+    ur_stmt = select(UserRole).where(
+        UserRole.user_id == user.id,
+        UserRole.role_id == role.id,
+    )
+    existing_ur = (await session.execute(ur_stmt)).scalar_one_or_none()
+    if not existing_ur:
+        ur = UserRole(user_id=user.id, role_id=role.id)
+        session.add(ur)
+        await session.flush()
         print(f"Assigned role '{role_name}' to user id={user.id}")
 
     # Set staff credentials

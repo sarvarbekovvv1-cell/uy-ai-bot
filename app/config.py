@@ -92,11 +92,40 @@ class Settings(BaseSettings):
     admin_session_cookie_secure: bool = Field(default=False, alias="ADMIN_SESSION_COOKIE_SECURE")
     admin_session_secret: str = Field(default="", alias="ADMIN_SESSION_SECRET")
 
+    # Media Storage Configuration
+    media_storage_dir: str = Field(default=".cache/media", alias="MEDIA_STORAGE_DIR")
+
     def get_admin_allowed_origins(self) -> list[str]:
         """Return list of allowed CORS origins for Admin Panel."""
         if not self.admin_allowed_origins:
             return []
-        return [o.strip() for o in self.admin_allowed_origins.split(",") if o.strip()]
+        raw = self.admin_allowed_origins.strip()
+        if raw.startswith("[") and raw.endswith("]"):
+            try:
+                import json
+
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(o).strip() for o in parsed if str(o).strip()]
+            except Exception:
+                pass
+        return [o.strip() for o in raw.split(",") if o.strip()]
+
+    def get_miniapp_allowed_origins(self) -> list[str]:
+        """Return list of allowed CORS origins for Mini App."""
+        if not self.miniapp_allowed_origins:
+            return []
+        raw = self.miniapp_allowed_origins.strip()
+        if raw.startswith("[") and raw.endswith("]"):
+            try:
+                import json
+
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(o).strip() for o in parsed if str(o).strip()]
+            except Exception:
+                pass
+        return [o.strip() for o in raw.split(",") if o.strip()]
 
     def get_effective_amocrm_base_url(self) -> str:
         """Return canonical amoCRM base URL without trailing slash."""
@@ -152,14 +181,50 @@ class Settings(BaseSettings):
                 f"{self.database_host}:{self.database_port}/{self.database_name}"
             )
 
-        # In production, enforce non-empty credentials and secure tokens
+        # In production, enforce fail-fast security constraints
         if self.app_env == "production":
             if not self.bot_token or self.bot_token.strip() == "":
                 raise ValueError("BOT_TOKEN must be set in production environment.")
+
             if not self.database_password or self.database_password in ("uyai_password", ""):
                 raise ValueError(
                     "DATABASE_PASSWORD must be configured with a secure value in production."
                 )
+
+            if self.app_debug:
+                raise ValueError("APP_DEBUG must be False in production.")
+
+            if "sqlite" in (self.database_url or "").lower():
+                raise ValueError("SQLite is prohibited in production. Configure PostgreSQL.")
+
+            if self.miniapp_dev_auth_enabled:
+                raise ValueError("MINIAPP_DEV_AUTH_ENABLED must be False in production.")
+
+            if not self.admin_session_cookie_secure:
+                raise ValueError("ADMIN_SESSION_COOKIE_SECURE must be True in production.")
+
+            if len(self.admin_session_secret.strip()) < 32:
+                raise ValueError(
+                    "ADMIN_SESSION_SECRET must be at least 32 characters long in production."
+                )
+
+            if "*" in self.admin_allowed_origins or "*" in self.miniapp_allowed_origins:
+                raise ValueError("Wildcard '*' CORS origins are strictly prohibited.")
+
+            if self.ai_broker_enabled and not self.gemini_api_key.strip():
+                raise ValueError("GEMINI_API_KEY must be provided when AI_BROKER_ENABLED is True.")
+
+            if self.amocrm_enabled:
+                if not self.amocrm_client_id or not self.amocrm_client_secret:
+                    raise ValueError(
+                        "AMOCRM_CLIENT_ID and AMOCRM_CLIENT_SECRET are required "
+                        "when AMOCRM_ENABLED is True."
+                    )
+                if not self.amocrm_subdomain and not self.amocrm_base_url:
+                    raise ValueError(
+                        "AMOCRM_SUBDOMAIN or AMOCRM_BASE_URL is required "
+                        "when AMOCRM_ENABLED is True."
+                    )
 
         return self
 

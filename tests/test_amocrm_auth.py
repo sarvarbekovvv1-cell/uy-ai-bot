@@ -202,10 +202,17 @@ async def test_client_blocks_ssrf_and_untrusted_domains() -> None:
     """Test client blocks SSRF attempts and untrusted domains in production environment."""
     # Untrusted domain in production
     settings = Settings(
+        _env_file=None,
         APP_ENV="production",
+        APP_DEBUG=False,
         BOT_TOKEN="test-prod-bot-token",
         DATABASE_PASSWORD="secure_strong_password_123",
+        DATABASE_URL="postgresql+asyncpg://u:p@localhost:5432/db",
+        ADMIN_SESSION_COOKIE_SECURE=True,
+        ADMIN_SESSION_SECRET="a" * 32,
         AMOCRM_ENABLED=True,
+        AMOCRM_CLIENT_ID="mock_client_id",
+        AMOCRM_CLIENT_SECRET="mock_client_secret",
         AMOCRM_BASE_URL="https://malicious-attacker.com",
         AMOCRM_ACCESS_TOKEN="mock_token",
     )
@@ -216,10 +223,17 @@ async def test_client_blocks_ssrf_and_untrusted_domains() -> None:
 
     # Valid domain passes validation
     valid_settings = Settings(
+        _env_file=None,
         APP_ENV="production",
+        APP_DEBUG=False,
         BOT_TOKEN="test-prod-bot-token",
         DATABASE_PASSWORD="secure_strong_password_123",
+        DATABASE_URL="postgresql+asyncpg://u:p@localhost:5432/db",
+        ADMIN_SESSION_COOKIE_SECURE=True,
+        ADMIN_SESSION_SECRET="a" * 32,
         AMOCRM_ENABLED=True,
+        AMOCRM_CLIENT_ID="mock_client_id",
+        AMOCRM_CLIENT_SECRET="mock_client_secret",
         AMOCRM_BASE_URL="https://mycompany.amocrm.ru",
         AMOCRM_ACCESS_TOKEN="mock_token",
     )
