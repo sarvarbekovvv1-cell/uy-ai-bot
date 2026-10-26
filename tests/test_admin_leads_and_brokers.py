@@ -218,3 +218,50 @@ async def test_assign_lead_broker_post_alias(
     )
     assert resp_assign.status_code == 200
     assert resp_assign.json()["broker_id"] == broker_b.id
+
+
+@pytest.mark.asyncio
+async def test_admin_brokers_list_contract_and_rbac(
+    async_client: AsyncClient, setup_leads_context
+) -> None:
+    """Test GET /api/admin/v1/brokers contract schema and permission enforcement."""
+    head_user, broker_a, broker_b, lead_a, _lead_b = setup_leads_context
+
+    # 1. Sales broker is forbidden from viewing broker management workload
+    login_sales = await async_client.post(
+        "/api/admin/v1/auth/login", json={"username": "broker_a", "password": "Password123!"}
+    )
+    assert login_sales.status_code == 200
+    resp_forbidden = await async_client.get("/api/admin/v1/brokers")
+    assert resp_forbidden.status_code == 403
+    csrf_sales = login_sales.json()["csrf_token"]
+    await async_client.post("/api/admin/v1/auth/logout", headers={"X-CSRF-Token": csrf_sales})
+
+    # 2. Head broker has permission to view all brokers
+    login_head = await async_client.post(
+        "/api/admin/v1/auth/login", json={"username": "head_boss", "password": "Password123!"}
+    )
+    assert login_head.status_code == 200
+    resp_brokers = await async_client.get("/api/admin/v1/brokers")
+    assert resp_brokers.status_code == 200
+    brokers_data = resp_brokers.json()
+    assert isinstance(brokers_data, list)
+    assert len(brokers_data) >= 3  # head_user, broker_a, broker_b
+
+    # Verify response schema fields to guarantee no missing-contract blank pages
+    for broker_item in brokers_data:
+        assert "id" in broker_item
+        assert "full_name" in broker_item
+        assert isinstance(broker_item["full_name"], str)
+        assert len(broker_item["full_name"]) > 0
+        assert "roles" in broker_item
+        assert isinstance(broker_item["roles"], list)
+        assert len(broker_item["roles"]) > 0
+        assert "role" in broker_item
+        assert "active_leads_count" in broker_item
+        assert isinstance(broker_item["active_leads_count"], int)
+        assert "pending_viewings_count" in broker_item
+        assert isinstance(broker_item["pending_viewings_count"], int)
+        assert "viewings_count" in broker_item
+        assert "won_leads_count" in broker_item
+        assert "lost_leads_count" in broker_item

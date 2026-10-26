@@ -79,14 +79,33 @@ async def list_brokers(
             )
         ).scalar_one() or 0
 
+        full_name = f"{broker.first_name or ''} {broker.last_name or ''}".strip()
+        if not full_name:
+            full_name = broker.username or f"Broker #{broker.id}"
+
+        masked_phone = None
+        if broker.phone:
+            p = broker.phone.strip()
+            if len(p) >= 7:
+                masked_phone = f"{p[:7]} *** ** {p[-2:]}"
+            else:
+                masked_phone = p
+
+        all_roles = [r.name for r in broker.roles] if broker.roles else [primary_role]
+
         items.append(
             AdminBrokerItem(
                 id=broker.id,
+                telegram_id=broker.telegram_id,
+                full_name=full_name,
                 first_name=broker.first_name,
                 last_name=broker.last_name,
                 username=broker.username,
+                phone_masked=masked_phone,
                 role=primary_role,
+                roles=all_roles,
                 active_leads_count=active_leads,
+                pending_viewings_count=viewings_count,
                 viewings_count=viewings_count,
                 won_leads_count=won_leads,
                 lost_leads_count=lost_leads,

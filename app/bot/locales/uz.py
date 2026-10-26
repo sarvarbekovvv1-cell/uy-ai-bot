@@ -5,6 +5,7 @@ MESSAGES: dict[str, str] = {
     "choose_language": "Tilni tanlang / Выберите язык:",
     "btn_uz": "🇺🇿 O‘zbekcha",
     "btn_ru": "🇷🇺 Русский",
+    "btn_en": "🇺🇸 English",
     # Consent
     "consent_text": (
         "UyAI xizmatidan foydalanish davomida Telegram profilingiz va siz taqdim "

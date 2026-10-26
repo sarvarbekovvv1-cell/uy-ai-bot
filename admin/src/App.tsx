@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "./auth/AuthContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminLayout, type AdminTab } from "./layouts/AdminLayout";
 import { AuditPage } from "./pages/AuditPage";
 import { BrokersPage } from "./pages/BrokersPage";
@@ -63,7 +64,7 @@ export const App: React.FC = () => {
       case "viewings":
         return hasPerm("viewings.view") ? <ViewingsPage /> : <ForbiddenMessage />;
       case "brokers":
-        return hasPerm("leads.assign") ? (
+        return hasPerm("brokers.view") || hasPerm("leads.assign") ? (
           <BrokersPage onSelectBroker={handleSelectBroker} />
         ) : (
           <ForbiddenMessage />
@@ -85,7 +86,9 @@ export const App: React.FC = () => {
 
   return (
     <AdminLayout currentTab={currentTab} onSelectTab={setCurrentTab}>
-      {renderContent()}
+      <ErrorBoundary key={currentTab}>
+        {renderContent()}
+      </ErrorBoundary>
     </AdminLayout>
   );
 };

@@ -20,7 +20,7 @@ from app.bot.keyboards import (
     get_valuation_property_type_keyboard,
     get_valuation_rooms_keyboard,
 )
-from app.bot.locales import LOCALES, get_text
+from app.bot.locales import LOCALES, format_condition, get_text
 from app.bot.states import PropertySubmissionStates, PropertyValuationStates
 from app.config import get_settings
 from app.logging import get_logger
@@ -558,26 +558,10 @@ def format_valuation_result_card(
     conf_map = {
         "uz": {"low": "Past", "medium": "O‘rta", "high": "Yuqori"},
         "ru": {"low": "Низкий", "medium": "Средний", "high": "Высокий"},
+        "en": {"low": "Low", "medium": "Medium", "high": "High"},
     }
     conf_label = conf_map.get(lang, conf_map["uz"]).get(res.confidence, res.confidence)
-
-    condition_map = {
-        "uz": {
-            "new": "Yangi / Yevroremont",
-            "renovated": "Ta'mirlangan",
-            "needs_renovation": "Ta'mirga muhtoj",
-            "shell": "Qora suvoq",
-        },
-        "ru": {
-            "new": "Новый / Евроремонт",
-            "renovated": "С ремонтом",
-            "needs_renovation": "Требует ремонта",
-            "shell": "Черновая отделка",
-        },
-    }
-    cond_label = condition_map.get(lang, condition_map["uz"]).get(
-        inp.condition or "", inp.condition or "—"
-    )
+    cond_label = format_condition(inp.condition, lang)
 
     explanation_text = ""
     if res.explanation and res.explanation.summary:

@@ -73,7 +73,7 @@ async def handle_settings_language_update(
         return
 
     new_lang = callback.data.split(":")[1]
-    if new_lang not in ("uz", "ru"):
+    if new_lang not in ("uz", "ru", "en"):
         new_lang = "uz"
 
     user_service = UserService()

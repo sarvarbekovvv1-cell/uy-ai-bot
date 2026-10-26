@@ -39,7 +39,7 @@ async def handle_language_choice(
         pass
 
     lang = callback.data.split(":")[1]
-    if lang not in ("uz", "ru"):
+    if lang not in ("uz", "ru", "en"):
         lang = "uz"
 
     await state.update_data(language=lang)

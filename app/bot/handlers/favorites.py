@@ -13,7 +13,15 @@ from app.bot.keyboards import (
     get_property_card_keyboard,
     get_property_details_keyboard,
 )
-from app.bot.locales import LOCALES, get_text
+from app.bot.locales import (
+    LOCALES,
+    format_cadastre,
+    format_condition,
+    format_furniture,
+    format_listing_type,
+    format_property_type,
+    get_text,
+)
 from app.config import get_settings
 from app.core.exceptions import PropertyNotFoundError
 from app.logging import get_logger
@@ -58,43 +66,104 @@ def resolve_property_photo(photo_item: Any) -> Any:
     return file_id
 
 
-def format_card_caption(prop: Property, _lang: str = "uz") -> str:
+def format_card_caption(prop: Property, lang: str = "uz") -> str:
     """Format short summary card for a property."""
-    prop_type = prop.property_type.capitalize()
+    prop_type = format_property_type(prop.property_type, lang)
+    listing_type = format_listing_type(prop.listing_type, lang)
+    cond = format_condition(prop.condition, lang)
+
+    if lang == "ru":
+        rooms_label = "комн."
+        floor_label = f"{prop.floor}/{prop.total_floors} этаж"
+    elif lang == "en":
+        rooms_label = "rooms"
+        floor_label = f"Floor {prop.floor}/{prop.total_floors}"
+    else:
+        rooms_label = "xona"
+        floor_label = f"{prop.floor}/{prop.total_floors} qavat"
+
     return (
-        f"🏠 {prop_type} ({prop.listing_type.upper()})\n"
+        f"🏠 {prop_type} ({listing_type})\n"
         f"📍 {prop.region}, {prop.district}\n"
-        f"🚪 {prop.rooms} xona | 📐 {prop.total_area} m²\n"
-        f"🏢 {prop.floor}/{prop.total_floors} qavat\n"
+        f"🚪 {prop.rooms} {rooms_label} | 📐 {prop.total_area} m²\n"
+        f"🏢 {floor_label}\n"
         f"💰 {prop.price:,.0f} {prop.currency}\n"
-        f"🛠 {prop.condition.capitalize()}\n"
+        f"🛠 {cond}\n"
         f"🆔 #{prop.id}"
     )
 
 
 def format_detailed_view(prop: Property, lang: str = "uz") -> str:
     """Format comprehensive public property details without exposing owner PII."""
-    prop_type = prop.property_type.capitalize()
-    lines = [
-        get_text("detail_title", lang).format(id=prop.id),
-        "",
-        f"🏷 Turi / Тип: {prop_type} ({prop.listing_type.upper()})",
-        f"📍 Hudud / Регион: {prop.region}, {prop.district}",
-        f"🚪 Xonalar soni / Комнаты: {prop.rooms}",
-        f"📐 Umumiy maydon / Площадь: {prop.total_area} m²",
-    ]
-    if prop.living_area:
-        lines.append(f"🛋 Yashash maydoni / Жилая площадь: {prop.living_area} m²")
-    if prop.floor and prop.total_floors:
-        lines.append(f"🏢 Qavat / Этаж: {prop.floor}/{prop.total_floors}")
-    lines.append(f"🛠 Ta’mir / Ремонт: {prop.condition}")
-    lines.append(f"🛋 Mebel: {'Bor / Есть' if prop.has_furniture else 'Yo‘q / Нет'}")
-    lines.append(f"📄 Kadastr: {prop.cadastre_status}")
-    lines.append(f"💰 Narxi / Цена: {prop.price:,.0f} {prop.currency}")
-    if prop.negotiable:
-        lines.append("🤝 Savdolashish / Торг: Bor / Есть")
-    if prop.description:
-        lines.append(f"\n📝 Qo‘shimcha ma'lumot:\n{prop.description}")
+    prop_type = format_property_type(prop.property_type, lang)
+    listing_type = format_listing_type(prop.listing_type, lang)
+    cond = format_condition(prop.condition, lang)
+    cadastre = format_cadastre(prop.cadastre_status, lang)
+    furniture = format_furniture(prop.has_furniture, lang)
+
+    if lang == "ru":
+        lines = [
+            get_text("detail_title", lang).format(id=prop.id),
+            "",
+            f"🏷 Тип: {prop_type} ({listing_type})",
+            f"📍 Регион: {prop.region}, {prop.district}",
+            f"🚪 Комнаты: {prop.rooms}",
+            f"📐 Общая площадь: {prop.total_area} м²",
+        ]
+        if prop.living_area:
+            lines.append(f"🛋 Жилая площадь: {prop.living_area} м²")
+        if prop.floor and prop.total_floors:
+            lines.append(f"🏢 Этаж: {prop.floor}/{prop.total_floors}")
+        lines.append(f"🛠 Ремонт: {cond}")
+        lines.append(f"🛋 Мебель: {furniture}")
+        lines.append(f"📄 Кадастр: {cadastre}")
+        lines.append(f"💰 Цена: {prop.price:,.0f} {prop.currency}")
+        if prop.negotiable:
+            lines.append("🤝 Торг: Есть")
+        if prop.description:
+            lines.append(f"\n📝 Дополнительная информация:\n{prop.description}")
+    elif lang == "en":
+        lines = [
+            get_text("detail_title", lang).format(id=prop.id),
+            "",
+            f"🏷 Type: {prop_type} ({listing_type})",
+            f"📍 Region: {prop.region}, {prop.district}",
+            f"🚪 Rooms: {prop.rooms}",
+            f"📐 Total area: {prop.total_area} m²",
+        ]
+        if prop.living_area:
+            lines.append(f"🛋 Living area: {prop.living_area} m²")
+        if prop.floor and prop.total_floors:
+            lines.append(f"🏢 Floor: {prop.floor}/{prop.total_floors}")
+        lines.append(f"🛠 Condition: {cond}")
+        lines.append(f"🛋 Furniture: {furniture}")
+        lines.append(f"📄 Cadastre: {cadastre}")
+        lines.append(f"💰 Price: {prop.price:,.0f} {prop.currency}")
+        if prop.negotiable:
+            lines.append("🤝 Negotiable: Yes")
+        if prop.description:
+            lines.append(f"\n📝 Additional details:\n{prop.description}")
+    else:
+        lines = [
+            get_text("detail_title", lang).format(id=prop.id),
+            "",
+            f"🏷 Turi: {prop_type} ({listing_type})",
+            f"📍 Hudud: {prop.region}, {prop.district}",
+            f"🚪 Xonalar soni: {prop.rooms}",
+            f"📐 Umumiy maydon: {prop.total_area} m²",
+        ]
+        if prop.living_area:
+            lines.append(f"🛋 Yashash maydoni: {prop.living_area} m²")
+        if prop.floor and prop.total_floors:
+            lines.append(f"🏢 Qavat: {prop.floor}/{prop.total_floors}")
+        lines.append(f"🛠 Ta’mir holati: {cond}")
+        lines.append(f"🛋 Mebel: {furniture}")
+        lines.append(f"📄 Kadastr: {cadastre}")
+        lines.append(f"💰 Narxi: {prop.price:,.0f} {prop.currency}")
+        if prop.negotiable:
+            lines.append("🤝 Savdolashish: Bor")
+        if prop.description:
+            lines.append(f"\n📝 Qo‘shimcha ma'lumot:\n{prop.description}")
 
     return "\n".join(lines)
 

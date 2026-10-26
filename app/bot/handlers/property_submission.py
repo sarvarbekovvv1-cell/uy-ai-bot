@@ -22,7 +22,15 @@ from app.bot.keyboards import (
     get_remove_keyboard,
     get_submission_confirm_keyboard,
 )
-from app.bot.locales import LOCALES, get_text
+from app.bot.locales import (
+    LOCALES,
+    format_cadastre,
+    format_condition,
+    format_furniture,
+    format_listing_type,
+    format_property_type,
+    get_text,
+)
 from app.bot.states import PropertySubmissionStates
 from app.core.exceptions import IncompletePropertyError
 from app.logging import get_logger
@@ -501,21 +509,60 @@ async def handle_photos_ready(
         await message.answer(get_text("photo_min_error", lang))
         return
 
-    summary = (
-        f"{get_text('preview_title', lang)}\n\n"
-        f"🏷 Turi / Тип: {data.get('property_type')}\n"
-        f"📌 Yo‘nalish / Направление: {data.get('listing_type')}\n"
-        f"📍 Manzil / Адрес: {data.get('region')}, {data.get('district')}, {data.get('address')}\n"
-        f"🚪 Xonalar / Комнаты: {data.get('rooms')}\n"
-        f"📐 Maydon / Площадь: {data.get('total_area')} m²\n"
-        f"🏢 Qavat / Этаж: {data.get('floor')}/{data.get('total_floors')}\n"
-        f"🛠 Ta’mir / Ремонт: {data.get('condition')}\n"
-        f"🛋 Mebel / Мебель: {'Ha/Да' if data.get('has_furniture') else 'Yo‘q/Нет'}\n"
-        f"📄 Kadastr / Кадастр: {data.get('cadastre_status')}\n"
-        f"💰 Narxi / Цена: {data.get('price'):,.0f} {data.get('currency')}\n"
-        f"🤝 Savdolashish / Торг: {'Ha/Да' if data.get('negotiable') else 'Yo‘q/Нет'}\n"
-        f"📸 Rasmlar soni / Всего фото: {photo_count} ta"
-    )
+    prop_type = format_property_type(data.get("property_type"), lang)
+    listing_type = format_listing_type(data.get("listing_type"), lang)
+    cond = format_condition(data.get("condition"), lang)
+    cadastre = format_cadastre(data.get("cadastre_status"), lang)
+    furniture = format_furniture(data.get("has_furniture"), lang)
+
+    if lang == "ru":
+        summary = (
+            f"{get_text('preview_title', lang)}\n\n"
+            f"🏷 Тип: {prop_type}\n"
+            f"📌 Направление: {listing_type}\n"
+            f"📍 Адрес: {data.get('region')}, {data.get('district')}, {data.get('address')}\n"
+            f"🚪 Комнаты: {data.get('rooms')}\n"
+            f"📐 Площадь: {data.get('total_area')} м²\n"
+            f"🏢 Этаж: {data.get('floor')}/{data.get('total_floors')}\n"
+            f"🛠 Ремонт: {cond}\n"
+            f"🛋 Мебель: {furniture}\n"
+            f"📄 Кадастр: {cadastre}\n"
+            f"💰 Цена: {data.get('price'):,.0f} {data.get('currency')}\n"
+            f"🤝 Торг: {'Есть' if data.get('negotiable') else 'Нет'}\n"
+            f"📸 Всего фото: {photo_count} шт."
+        )
+    elif lang == "en":
+        summary = (
+            f"{get_text('preview_title', lang)}\n\n"
+            f"🏷 Type: {prop_type}\n"
+            f"📌 Operation: {listing_type}\n"
+            f"📍 Address: {data.get('region')}, {data.get('district')}, {data.get('address')}\n"
+            f"🚪 Rooms: {data.get('rooms')}\n"
+            f"📐 Area: {data.get('total_area')} m²\n"
+            f"🏢 Floor: {data.get('floor')}/{data.get('total_floors')}\n"
+            f"🛠 Condition: {cond}\n"
+            f"🛋 Furniture: {furniture}\n"
+            f"📄 Cadastre: {cadastre}\n"
+            f"💰 Price: {data.get('price'):,.0f} {data.get('currency')}\n"
+            f"🤝 Negotiable: {'Yes' if data.get('negotiable') else 'No'}\n"
+            f"📸 Total photos: {photo_count}"
+        )
+    else:
+        summary = (
+            f"{get_text('preview_title', lang)}\n\n"
+            f"🏷 Turi: {prop_type}\n"
+            f"📌 Yo‘nalish: {listing_type}\n"
+            f"📍 Manzil: {data.get('region')}, {data.get('district')}, {data.get('address')}\n"
+            f"🚪 Xonalar: {data.get('rooms')}\n"
+            f"📐 Maydon: {data.get('total_area')} m²\n"
+            f"🏢 Qavat: {data.get('floor')}/{data.get('total_floors')}\n"
+            f"🛠 Ta’mir holati: {cond}\n"
+            f"🛋 Mebel: {furniture}\n"
+            f"📄 Kadastr: {cadastre}\n"
+            f"💰 Narxi: {data.get('price'):,.0f} {data.get('currency')}\n"
+            f"🤝 Savdolashish: {'Bor' if data.get('negotiable') else 'Yo‘q'}\n"
+            f"📸 Rasmlar soni: {photo_count} ta"
+        )
 
     await state.set_state(PropertySubmissionStates.waiting_confirmation)
     await message.answer(summary, reply_markup=get_submission_confirm_keyboard(lang))

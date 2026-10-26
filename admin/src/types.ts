@@ -100,13 +100,19 @@ export interface UserItem {
 
 export interface BrokerWorkloadItem {
   id: number;
-  telegram_id: number;
-  full_name: string;
-  username: string | null;
-  phone_masked: string | null;
-  roles: string[];
-  active_leads_count: number;
-  pending_viewings_count: number;
+  telegram_id?: number | null;
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  username?: string | null;
+  phone_masked?: string | null;
+  role?: string | null;
+  roles?: string[];
+  active_leads_count?: number;
+  pending_viewings_count?: number;
+  viewings_count?: number;
+  won_leads_count?: number;
+  lost_leads_count?: number;
 }
 
 export interface LeadItem {

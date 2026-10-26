@@ -48,6 +48,18 @@ MAIN_MENU_BUTTONS: set[str] = {
     "🏘 Мои объявления",
     "⚙️ Sozlamalar",
     "⚙️ Настройки",
+    "🏠 Buy property",
+    "🔑 Rent property",
+    "💰 Sell my property",
+    "🏡 Lease my property",
+    "📊 Estimate property value",
+    "📍 Search on map",
+    "🤖 AI broker",
+    "❤️ Saved properties",
+    "📅 My viewings",
+    "👨‍💼 Contact broker",
+    "🏘 My listings",
+    "⚙️ Settings",
 }
 
 
@@ -58,6 +70,7 @@ def get_language_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(text="🇺🇿 O‘zbekcha", callback_data="lang:uz"),
                 InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang:ru"),
+                InlineKeyboardButton(text="🇺🇸 English", callback_data="lang:en"),
             ]
         ]
     )
@@ -153,6 +166,12 @@ def get_property_type_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
             "commercial": "🏬 Коммерческая",
             "land": "🌱 Земельный участок",
         },
+        "en": {
+            "apartment": "🏢 Apartment",
+            "house": "🏡 House / Villa",
+            "commercial": "🏬 Commercial",
+            "land": "🌱 Land plot",
+        },
     }
     loc = labels.get(lang, labels["uz"])
     return InlineKeyboardMarkup(
@@ -201,6 +220,12 @@ def get_condition_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
             "needs_renovation": "🏚 Требует ремонта",
             "shell": "🧱 Черновая отделка",
         },
+        "en": {
+            "new": "✨ Newly renovated",
+            "renovated": "🛠 Renovated",
+            "needs_renovation": "🏚 Needs renovation",
+            "shell": "🧱 Shell & core",
+        },
     }
     loc = labels.get(lang, labels["uz"])
     return InlineKeyboardMarkup(
@@ -224,6 +249,7 @@ def get_furniture_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
     labels = {
         "uz": {"yes": "🛋 Bor", "no": "❌ Yo‘q"},
         "ru": {"yes": "🛋 Есть", "no": "❌ Нет"},
+        "en": {"yes": "🛋 Furnished", "no": "❌ Unfurnished"},
     }
     loc = labels.get(lang, labels["uz"])
     return InlineKeyboardMarkup(
@@ -250,6 +276,12 @@ def get_cadastre_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
             "in_process": "⏳ В процессе",
             "not_available": "❌ Нет",
             "unknown": "❓ Неизвестно",
+        },
+        "en": {
+            "available": "📄 Available",
+            "in_process": "⏳ In process",
+            "not_available": "❌ Not available",
+            "unknown": "❓ Unknown",
         },
     }
     loc = labels.get(lang, labels["uz"])
@@ -286,6 +318,7 @@ def get_negotiable_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
     labels = {
         "uz": {"yes": "🤝 Kelishiladi", "no": "🔒 Bo‘lishi shu"},
         "ru": {"yes": "🤝 Торг уместен", "no": "🔒 Без торга"},
+        "en": {"yes": "🤝 Negotiable", "no": "🔒 Fixed price"},
     }
     loc = labels.get(lang, labels["uz"])
     return InlineKeyboardMarkup(
@@ -1110,6 +1143,7 @@ def get_valuation_listing_type_keyboard(lang: str = "uz") -> InlineKeyboardMarku
     labels = {
         "uz": {"sale": "💰 Sotish", "rent": "🔑 Ijara"},
         "ru": {"sale": "💰 Продажа", "rent": "🔑 Аренда"},
+        "en": {"sale": "💰 Sale", "rent": "🔑 Rent"},
     }
     loc = labels.get(lang, labels["uz"])
     return InlineKeyboardMarkup(
@@ -1136,6 +1170,12 @@ def get_valuation_property_type_keyboard(lang: str = "uz") -> InlineKeyboardMark
             "house": "🏡 Дом / Участок",
             "commercial": "🏬 Коммерческая",
             "land": "🌾 Земельный участок",
+        },
+        "en": {
+            "apartment": "🏢 Apartment",
+            "house": "🏡 House / Villa",
+            "commercial": "🏬 Commercial",
+            "land": "🌾 Land plot",
         },
     }
     loc = labels.get(lang, labels["uz"])
@@ -1203,6 +1243,12 @@ def get_valuation_condition_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
             "needs_renovation": "🏚 Требует ремонта",
             "shell": "🧱 Черновая отделка",
         },
+        "en": {
+            "new": "✨ Newly renovated",
+            "renovated": "🛠 Renovated (good)",
+            "needs_renovation": "🏚 Needs renovation",
+            "shell": "🧱 Shell & core",
+        },
     }
     loc = labels.get(lang, labels["uz"])
     return InlineKeyboardMarkup(
@@ -1230,6 +1276,7 @@ def get_valuation_floor_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
     labels = {
         "uz": "⏭ O‘tkazib yuborish",
         "ru": "⏭ Пропустить",
+        "en": "⏭ Skip",
     }
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -1277,6 +1324,14 @@ def get_valuation_actions_keyboard(
             "submit_rent": "🏡 Сдать в аренду",
             "broker": "👨‍💼 Связаться с брокером",
             "menu": "⬅️ Главное меню",
+        },
+        "en": {
+            "comps": "🏘 Comparable listings",
+            "search": "🔎 Search similar listings",
+            "submit_sale": "💰 List for sale",
+            "submit_rent": "🏡 List for rent",
+            "broker": "👨‍💼 Contact broker",
+            "menu": "⬅️ Main menu",
         },
     }
     loc = labels.get(lang, labels["uz"])

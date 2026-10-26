@@ -8,7 +8,14 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import get_review_action_keyboard
-from app.bot.locales import get_text
+from app.bot.locales import (
+    format_cadastre,
+    format_condition,
+    format_furniture,
+    format_listing_type,
+    format_property_type,
+    get_text,
+)
 from app.bot.states import PropertyReviewStates
 from app.core.exceptions import AuthorizationError
 from app.logging import get_logger
@@ -54,14 +61,20 @@ async def handle_review_properties_list(
     await prop_service.start_review(session, property_id=prop.id, reviewer_user_id=user.id)
 
     title = get_text("review_item_title", lang).format(id=prop.id)
+    prop_type = format_property_type(prop.property_type, lang)
+    listing_type = format_listing_type(prop.listing_type, lang)
+    cond = format_condition(prop.condition, lang)
+    cadastre = format_cadastre(prop.cadastre_status, lang)
+    furniture = format_furniture(prop.has_furniture, lang)
+
     details = (
         f"{title}\n\n"
-        f"🏷 Turi: {prop.property_type} ({prop.listing_type})\n"
+        f"🏷 Turi: {prop_type} ({listing_type})\n"
         f"📍 Manzil: {prop.region}, {prop.district}, {prop.address}\n"
         f"🚪 Xonalar: {prop.rooms} | 📐 Maydon: {prop.total_area} m²\n"
         f"🏢 Qavat: {prop.floor}/{prop.total_floors}\n"
-        f"🛠 Ta’mir: {prop.condition} | 🛋 Mebel: {'Bor' if prop.has_furniture else 'Yo‘q'}\n"
-        f"📄 Kadastr: {prop.cadastre_status}\n"
+        f"🛠 Ta’mir holati: {cond} | 🛋 Mebel: {furniture}\n"
+        f"📄 Kadastr: {cadastre}\n"
         f"💰 Narxi: {prop.price:,.0f} {prop.currency}\n"
         f"Status: <b>{prop.status.upper()}</b>"
     )

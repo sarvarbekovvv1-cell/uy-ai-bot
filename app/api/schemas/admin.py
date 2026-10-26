@@ -141,11 +141,16 @@ class UserRoleUpdateRequest(BaseModel):
 # -----------------------------------------------------------------------------
 class AdminBrokerItem(BaseModel):
     id: int
+    telegram_id: int | None = None
+    full_name: str | None = None
     first_name: str | None = None
     last_name: str | None = None
     username: str | None = None
+    phone_masked: str | None = None
     role: str
+    roles: list[str] = Field(default_factory=list)
     active_leads_count: int = 0
+    pending_viewings_count: int = 0
     viewings_count: int = 0
     won_leads_count: int = 0
     lost_leads_count: int = 0
