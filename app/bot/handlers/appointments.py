@@ -45,6 +45,18 @@ APPOINTMENTS_BUTTONS = {
     if locale_dict.get("btn_appointments")
 } | {"📅 Uchrashuvlarim", "📅 Мои встречи"}
 
+BROKER_CONTACT_BUTTONS = {
+    locale_dict.get("btn_contact_broker")
+    for locale_dict in LOCALES.values()
+    if locale_dict.get("btn_contact_broker")
+} | {
+    "👨‍💼 Broker bilan bog‘lanish",
+    "👨‍💼 Связаться с брокером",
+    "👨‍💼 Contact broker",
+    "/broker_contact",
+    "/contact_broker",
+}
+
 
 def format_appointment_card(req: ViewingRequest, lang: str = "uz") -> str:  # noqa: ARG001
     """Format customer view for a viewing or broker contact request."""
@@ -501,7 +513,9 @@ async def handle_viewing_confirm(
 # --- Broker Contact Request Flow ---
 
 
-@appointments_router.callback_query(F.data.startswith("broker:contact:"))
+@appointments_router.callback_query(
+    F.data.startswith("broker:contact:") | F.data.startswith("contact_broker:")
+)
 async def handle_broker_contact_prompt(
     callback: CallbackQuery,
     session: AsyncSession,
@@ -510,7 +524,8 @@ async def handle_broker_contact_prompt(
     if not callback.data or not callback.from_user:
         return
 
-    property_id = int(callback.data.split(":")[2])
+    parts = callback.data.split(":")
+    property_id = int(parts[-1])
     user_service = UserService()
     user = await user_service.get_by_telegram_id(session, callback.from_user.id)
     if not user or not await user_service.is_registration_complete(user):
@@ -531,6 +546,103 @@ async def handle_broker_contact_prompt(
 
     if callback.message and isinstance(callback.message, Message):
         await callback.message.reply(prompt_text, reply_markup=kb)
+
+
+@appointments_router.message(F.text.in_(BROKER_CONTACT_BUTTONS))
+async def handle_menu_broker_contact(
+    message: Message,
+    session: AsyncSession,
+    state: FSMContext,
+) -> None:
+    """Handle main menu 'Broker bilan bog‘lanish' button and commands."""
+    if not message.from_user:
+        return
+
+    user_service = UserService()
+    user = await user_service.get_by_telegram_id(session, message.from_user.id)
+    if not user or not await user_service.is_registration_complete(user):
+        await message.answer("Iltimos, avval ro‘yxatdan o‘ting: /start")
+        return
+
+    lang = user.language or "uz"
+
+    # 1. Check if property ID was passed in command, e.g. /broker_contact 1
+    property_id: int | None = None
+    if message.text:
+        parts = message.text.strip().split()
+        if len(parts) > 1 and parts[1].isdigit():
+            property_id = int(parts[1])
+
+    # 2. Check FSM state for active/selected property
+    if not property_id:
+        data = await state.get_data()
+        raw_id = (
+            data.get("property_id")
+            or data.get("current_property_id")
+            or data.get("selected_property_id")
+        )
+        if raw_id:
+            try:
+                property_id = int(raw_id)
+            except (ValueError, TypeError):
+                pass
+
+    # 3. Check customer's favorites
+    if not property_id:
+        from app.repositories.favorite_repository import FavoriteRepository
+
+        fav_repo = FavoriteRepository()
+        fav_props = await fav_repo.list_approved_properties_by_user(
+            session, user_id=user.id, limit=1
+        )
+        if fav_props:
+            property_id = fav_props[0].id
+
+    # 4. Check latest approved property
+    prop = None
+    search_service = PropertySearchService()
+    if property_id:
+        try:
+            prop = await search_service.get_approved_details(session, property_id)
+        except Exception:
+            prop = None
+
+    if not prop:
+        from app.repositories.property_repository import PropertyRepository
+
+        prop_repo = PropertyRepository()
+        latest_props = await prop_repo.list_by_status(session, status="approved", limit=1)
+        if latest_props:
+            prop = latest_props[0]
+            property_id = prop.id
+
+    if prop:
+        prop_title = prop.title or f"{prop.rooms} xonali {prop.property_type}"
+        prompt_text = (
+            f"🏠 <b>{prop_title}</b> (#{prop.id})\n"
+            f"📍 {prop.region}, {prop.district}\n"
+            f"💰 {prop.price:,.0f} {prop.currency}\n\n"
+            f"{get_text('broker_contact_confirm_prompt', lang)}"
+        )
+        kb = get_broker_contact_confirm_keyboard(prop.id, lang=lang)
+        await message.answer(prompt_text, reply_markup=kb)
+        return
+
+    empty_text = (
+        "Hozirda tanlash uchun faol ko‘chmas mulk mavjud emas.\n"
+        "Iltimos, avval qidiruv yoki xarita orqali mulkni ko‘ring."
+        if lang == "uz"
+        else (
+            "В настоящее время нет активных объектов недвижимости для выбора.\n"
+            "Пожалуйста, сначала найдите объект через поиск или карту."
+            if lang == "ru"
+            else (
+                "Currently there are no active properties to select.\n"
+                "Please browse properties via search or map first."
+            )
+        )
+    )
+    await message.answer(empty_text, reply_markup=get_main_menu_keyboard(lang))
 
 
 @appointments_router.callback_query(F.data.startswith("broker_contact:confirm:"))

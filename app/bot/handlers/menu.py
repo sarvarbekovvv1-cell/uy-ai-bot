@@ -10,9 +10,7 @@ from app.services.user_service import UserService
 menu_router = Router(name="menu")
 
 # Collect all localized button labels for placeholder buttons
-PLACEHOLDER_BUTTON_KEYS = [
-    "btn_contact_broker",
-]
+PLACEHOLDER_BUTTON_KEYS: list[str] = []
 
 PLACEHOLDER_TEXTS: set[str] = set()
 for locale_dict in LOCALES.values():
