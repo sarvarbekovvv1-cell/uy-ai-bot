@@ -24,8 +24,104 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Starting %s in %s mode", settings.app_name, settings.app_env)
     if settings.app_env == "production":
         logger.info("Verified production settings: strict security constraints enforced.")
+
+    # Auto-initialize database schema if tables do not exist
+    try:
+        import app.models  # noqa: F401
+        from app.database.base import Base
+        from app.database.session import get_engine
+
+        engine = get_engine()
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database schema initialized and verified.")
+
+        # Ensure roles and default admin account exist
+        from sqlalchemy import select
+        from app.database.session import get_session_factory
+        from app.models.admin_auth import StaffCredential
+        from app.models.user import User
+        from app.repositories.role_repository import RoleRepository
+        from app.services.admin_auth_service import AdminAuthService
+
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            role_repo = RoleRepository()
+            await role_repo.ensure_default_roles(session)
+
+            cred_res = await session.execute(
+                select(StaffCredential).where(StaffCredential.username == "admin")
+            )
+            if not cred_res.scalar_one_or_none():
+                user_res = await session.execute(select(User).where(User.telegram_id == 1))
+                admin_user = user_res.scalar_one_or_none()
+                if not admin_user:
+                    admin_user = User(
+                        telegram_id=1,
+                        first_name="Admin",
+                        last_name="System",
+                        is_active=True,
+                        is_verified=True,
+                    )
+                    session.add(admin_user)
+                    await session.flush()
+
+                auth_svc = AdminAuthService(settings)
+                await auth_svc.create_or_update_staff_credential(
+                    session,
+                    user_id=admin_user.id,
+                    username="admin",
+                    password="AdminPassword2026!",
+                    role_name="superadmin",
+                )
+                logger.info("Default admin credentials initialized: username='admin'")
+    except Exception as exc:
+        logger.warning("Could not auto-initialize database schema: %s", exc)
+
+    # Start integrated Telegram bot polling if BOT_TOKEN is configured
+    bot_task = None
+    bot_instance = None
+    if settings.bot_token and settings.bot_token.strip():
+        try:
+            import asyncio
+            from aiogram import Bot
+            from aiogram.client.default import DefaultBotProperties
+            from aiogram.enums import ParseMode
+            from app.bot.dispatcher import create_dispatcher
+
+            bot_instance = Bot(
+                token=settings.bot_token,
+                default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+            )
+            dp = create_dispatcher()
+
+            async def _run_bot():
+                logger.info("Starting integrated Telegram bot polling for %s...", settings.app_name)
+                try:
+                    await dp.start_polling(bot_instance, drop_pending_updates=True)
+                except asyncio.CancelledError:
+                    pass
+                except Exception as e:
+                    logger.error("Integrated Telegram bot error: %s", e)
+
+            bot_task = asyncio.create_task(_run_bot())
+            logger.info("Integrated Telegram bot background task created.")
+        except Exception as exc:
+            logger.warning("Could not start integrated Telegram bot: %s", exc)
+
     yield
     logger.info("Shutting down %s", settings.app_name)
+    if bot_task:
+        bot_task.cancel()
+        try:
+            await bot_task
+        except (asyncio.CancelledError, Exception):
+            pass
+    if bot_instance:
+        try:
+            await bot_instance.session.close()
+        except Exception:
+            pass
     await close_db_engine()
 
 

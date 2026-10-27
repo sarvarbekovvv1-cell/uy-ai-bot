@@ -174,6 +174,24 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def assemble_and_validate(self) -> "Settings":
+        import os
+
+        # Support cloud PaaS standard PORT environment variable
+        if "PORT" in os.environ and os.environ["PORT"].strip():
+            try:
+                self.app_port = int(os.environ["PORT"].strip())
+            except ValueError:
+                pass
+
+        # Normalize database_url protocol for asyncpg if provided
+        if self.database_url:
+            db_url = self.database_url.strip()
+            if db_url.startswith("postgres://"):
+                db_url = "postgresql+asyncpg://" + db_url[len("postgres://"):]
+            elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+asyncpg://"):
+                db_url = "postgresql+asyncpg://" + db_url[len("postgresql://"):]
+            self.database_url = db_url
+
         # Compute database_url if not explicitly provided
         if not self.database_url:
             self.database_url = (
