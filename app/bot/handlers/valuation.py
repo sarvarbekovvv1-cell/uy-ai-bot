@@ -17,6 +17,7 @@ from app.bot.keyboards import (
     get_valuation_districts_keyboard,
     get_valuation_floor_keyboard,
     get_valuation_listing_type_keyboard,
+    get_valuation_payment_keyboard,
     get_valuation_property_type_keyboard,
     get_valuation_rooms_keyboard,
 )
@@ -24,7 +25,9 @@ from app.bot.locales import LOCALES, format_condition, get_text
 from app.bot.states import PropertySubmissionStates, PropertyValuationStates
 from app.config import get_settings
 from app.logging import get_logger
+from app.repositories.valuation_order_repository import ValuationOrderRepository
 from app.schemas.valuation import PropertyValuationInput, PropertyValuationResult
+from app.services.payment import ValuationPaymentService
 from app.services.user_service import UserService
 from app.services.valuation import ValuationService
 
@@ -455,6 +458,43 @@ async def handle_valuation_floor_text(
     )
 
 
+def format_valuation_input_summary(inp: PropertyValuationInput, lang: str = "uz") -> str:
+    """Format submitted property parameters for customer review and payment confirmation."""
+    prop_type_label = "Kvartira" if inp.property_type == "apartment" else "Hovli / Uy"
+    if lang == "ru":
+        prop_type_label = "Квартира" if inp.property_type == "apartment" else "Дом / Участок"
+    listing_label = "Sotuv" if inp.listing_type == "sale" else "Ijara"
+    if lang == "ru":
+        listing_label = "Продажа" if inp.listing_type == "sale" else "Аренда"
+
+    cond_label = format_condition(inp.condition, lang) if inp.condition else "-"
+    floor_label = (
+        f"{inp.floor}/{inp.total_floors}"
+        if inp.floor and inp.total_floors
+        else (f"{inp.floor}" if inp.floor else "-")
+    )
+
+    if lang == "ru":
+        return (
+            f"{get_text('val_order_summary_title', lang)}\n\n"
+            f"• <b>Тип:</b> {prop_type_label} ({listing_label})\n"
+            f"• <b>Локация:</b> {inp.region}, {inp.district}\n"
+            f"• <b>Комнат:</b> {inp.rooms}\n"
+            f"• <b>Площадь:</b> {inp.total_area} м²\n"
+            f"• <b>Ремонт:</b> {cond_label}\n"
+            f"• <b>Этаж:</b> {floor_label}\n"
+        )
+    return (
+        f"{get_text('val_order_summary_title', lang)}\n\n"
+        f"• <b>Turi:</b> {prop_type_label} ({listing_label})\n"
+        f"• <b>Hudud:</b> {inp.region}, {inp.district}\n"
+        f"• <b>Xonalar:</b> {inp.rooms}\n"
+        f"• <b>Maydoni:</b> {inp.total_area} m²\n"
+        f"• <b>Ta'miri:</b> {cond_label}\n"
+        f"• <b>Qavati:</b> {floor_label}\n"
+    )
+
+
 @valuation_router.callback_query(
     PropertyValuationStates.waiting_currency, F.data.startswith("val_curr:")
 )
@@ -463,10 +503,11 @@ async def handle_valuation_currency(
     state: FSMContext,
     session: AsyncSession,
     valuation_service: ValuationService | None = None,
+    val_pay_svc: ValuationPaymentService | None = None,
 ) -> None:
-    """Finalize input and execute deterministic valuation with optional AI explanation."""
+    """Finalize input, enforce monetization check, and create payment order."""
     await callback.answer()
-    if not callback.data:
+    if not callback.data or not callback.from_user:
         return
 
     currency = callback.data.split(":", 1)[1]
@@ -489,19 +530,75 @@ async def handle_valuation_currency(
         currency=currency,  # type: ignore[arg-type]
     )
 
-    if valuation_service is None:
-        valuation_service = get_valuation_service()
+    # In production (valuation_service is None), always enforce monetization
+    if val_pay_svc is None and valuation_service is None:
+        val_pay_svc = ValuationPaymentService()
 
+    if val_pay_svc is not None:
+        # Monetization check: If price is not set or payment providers are not configured
+        if not val_pay_svc.is_service_ready():
+            notice_text = get_text("val_payment_service_unconfigured", lang)
+            markup = get_main_menu_keyboard(lang)
+            await state.clear()
+            if callback.message and isinstance(callback.message, Message):
+                await callback.message.answer(notice_text, reply_markup=markup)
+            return
+
+        # User lookup
+        user_service = UserService()
+        user = await user_service.get_by_telegram_id(session, callback.from_user.id)
+        if not user:
+            await callback.answer("Foydalanuvchi topilmadi.", show_alert=True)
+            return
+
+        # Create ValuationOrder
+        order = await val_pay_svc.create_valuation_order(
+            session,
+            user_id=user.id,
+            telegram_id=callback.from_user.id,
+            property_input=val_input,
+        )
+        await session.commit()
+
+        # Save order details in FSM state
+        await state.update_data(
+            order_id=order.order_id,
+            val_input=val_input.model_dump(mode="json"),
+        )
+        await state.set_state(PropertyValuationStates.waiting_payment)
+
+        # Format summary and payment prompt
+        summary_text = format_valuation_input_summary(val_input, lang)
+        price_fmt = f"{int(order.amount_uzs):,}".replace(",", " ")
+        price_notice = get_text("val_price_notice", lang).replace("{price}", price_fmt)
+        prompt_text = (
+            f"{summary_text}\n"
+            f"🆔 <b>Buyurtma ID:</b> <code>{order.order_id}</code>\n\n"
+            f"{price_notice}"
+        )
+
+        links = val_pay_svc.get_payment_links(order)
+        markup = get_valuation_payment_keyboard(
+            order_id=order.order_id,
+            click_url=links.get("click"),
+            payme_url=links.get("payme"),
+            lang=lang,
+        )
+
+        if callback.message and isinstance(callback.message, Message):
+            try:
+                await callback.message.edit_text(prompt_text, reply_markup=markup)
+            except TelegramBadRequest:
+                await callback.message.answer(prompt_text, reply_markup=markup)
+        return
+
+    # Direct calculation path (for explicit test mock injection)
     result: PropertyValuationResult = await valuation_service.valuate_property(
         session,
         val_input,
         language=lang,
     )
-
-    # Format card response
     card_text = format_valuation_result_card(val_input, result, lang)
-
-    # Save comps in state for detailed viewing
     comps_data = [comp.model_dump() for comp in result.comparable_properties]
     await state.update_data(
         last_result=result.model_dump(mode="json"),
@@ -521,6 +618,127 @@ async def handle_valuation_currency(
             await callback.message.edit_text(card_text, reply_markup=markup)
         except TelegramBadRequest:
             await callback.message.answer(card_text, reply_markup=markup)
+
+
+@valuation_router.callback_query(F.data.startswith("val_check_pay:"))
+async def handle_check_valuation_payment(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session: AsyncSession,
+    val_pay_svc: ValuationPaymentService | None = None,
+) -> None:
+    """Verify server-side payment status and show valuation card if paid."""
+    if not callback.data or not callback.from_user:
+        return
+
+    order_id = callback.data.split(":", 1)[1]
+    order_repo = ValuationOrderRepository()
+    order = await order_repo.get_by_order_id(session, order_id)
+
+    data = await state.get_data()
+    lang = data.get("language", "uz")
+
+    if not order:
+        await callback.answer("Buyurtma topilmadi.", show_alert=True)
+        return
+
+    # Security check: User must own the order
+    if order.telegram_id != callback.from_user.id:
+        await callback.answer("Ruxsatsiz amal!", show_alert=True)
+        return
+
+    if order.payment_status != "paid":
+        pending_msg = get_text("val_payment_pending", lang).replace("{order_id}", order_id)
+        await callback.answer("To‘lov hali tasdiqlanmadi.", show_alert=True)
+        if callback.message and isinstance(callback.message, Message):
+            try:
+                if val_pay_svc is None:
+                    val_pay_svc = ValuationPaymentService()
+                links = val_pay_svc.get_payment_links(order)
+                markup = get_valuation_payment_keyboard(
+                    order_id=order.order_id,
+                    click_url=links.get("click"),
+                    payme_url=links.get("payme"),
+                    lang=lang,
+                )
+                await callback.message.edit_text(pending_msg, reply_markup=markup)
+            except TelegramBadRequest:
+                pass
+        return
+
+    # Payment verified! If valuation not completed yet, fulfill now
+    await callback.answer("To‘lov tasdiqlandi!")
+    if val_pay_svc is None:
+        val_pay_svc = ValuationPaymentService()
+
+    result = await val_pay_svc.fulfill_order_and_valuate(session, order_id)
+    if not result:
+        if callback.message and isinstance(callback.message, Message):
+            await callback.message.answer(
+                "Baholashda texnik xatolik yuz berdi. Iltimos, qayta urinib ko‘ring."
+            )
+        return
+
+    val_input = PropertyValuationInput.model_validate(order.property_input)
+    card_text = format_valuation_result_card(val_input, result, lang)
+
+    # Save comps in state for detailed viewing
+    comps_data = [comp.model_dump() for comp in result.comparable_properties]
+    await state.update_data(
+        last_result=result.model_dump(mode="json"),
+        comps_data=comps_data,
+        subject_listing_type=val_input.listing_type,
+    )
+    await state.set_state(PropertyValuationStates.viewing_result)
+
+    markup = get_valuation_actions_keyboard(
+        has_comps=bool(result.comparable_properties),
+        listing_type=val_input.listing_type,
+        lang=lang,
+    )
+    if callback.message and isinstance(callback.message, Message):
+        try:
+            await callback.message.edit_text(card_text, reply_markup=markup)
+        except TelegramBadRequest:
+            await callback.message.answer(card_text, reply_markup=markup)
+
+
+@valuation_router.callback_query(F.data.startswith("val_cancel_pay:"))
+async def handle_cancel_valuation_payment(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session: AsyncSession,
+) -> None:
+    """Cancel pending valuation payment and return to main menu."""
+    await callback.answer()
+    if not callback.data:
+        return
+
+    order_id = callback.data.split(":", 1)[1]
+    order_repo = ValuationOrderRepository()
+    order = await order_repo.get_by_order_id(session, order_id)
+    if order and order.payment_status == "pending":
+        order.payment_status = "cancelled"
+        await session.commit()
+
+    data = await state.get_data()
+    lang = data.get("language", "uz")
+    await state.clear()
+
+    cancel_msg = get_text("val_payment_cancelled", lang)
+    if callback.message and isinstance(callback.message, Message):
+        await callback.message.answer(cancel_msg, reply_markup=get_main_menu_keyboard(lang))
+
+
+@valuation_router.callback_query(
+    F.data.startswith("val_pay_click:") | F.data.startswith("val_pay_payme:")
+)
+async def handle_unconfigured_provider_click(callback: CallbackQuery) -> None:
+    """Notice when provider is selected but credentials are not yet configured."""
+    await callback.answer(
+        "To‘lov provayderi sozlanish jarayonida. Iltimos, administrator bilan bog‘laning.",
+        show_alert=True,
+    )
 
 
 def format_valuation_result_card(

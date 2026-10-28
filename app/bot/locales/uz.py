@@ -370,4 +370,22 @@ MESSAGES: dict[str, str] = {
     "val_card_title": "📊 <b>AI BOZOR BAHOSI</b>",
     "val_comps_header": "🏘 <b>Tahlil qilingan o‘xshash tasdiqlangan e'lonlar:</b>\n",
     "val_no_comps": "Taqqoslangan e'lonlar mavjud emas.",
+    "val_payment_service_unconfigured": (
+        "📊 <b>AI orqali uy baholash xizmati</b>\n\n"
+        "Ushbu xizmat rasmiy to‘lov tizimiga ulanmoqda. Hozirda to‘lov integratsiyasi "
+        "sozlanish jarayonida. Tez orada Click va Payme orqali to‘lov qilish imkoniyati "
+        "ishga tushiriladi."
+    ),
+    "val_order_summary_title": "📋 <b>Kiritilgan mulk ma'lumotlari:</b>",
+    "val_price_notice": (
+        "💰 <b>Xizmat narxi:</b> {price} UZS\n\n"
+        "AI tahlil va bozor bahosi natijasini olish uchun rasmiy to‘lov tizimini tanlang:"
+    ),
+    "val_payment_pending": (
+        "⏳ <b>To‘lov hali tasdiqlanmadi</b> (#{order_id}).\n\n"
+        "Iltimos, Click yoki Payme orqali to‘lovni amalga oshiring. "
+        "To‘lov server tomonidan qabul qilinishi bilan AI baholash natijasi "
+        "shu yerda avtomatik ko‘rsatiladi."
+    ),
+    "val_payment_cancelled": "❌ To‘lov jarayoni bekor qilindi.",
 }

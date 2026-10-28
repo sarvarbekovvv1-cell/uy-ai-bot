@@ -359,4 +359,21 @@ MESSAGES: dict[str, str] = {
     "val_card_title": "📊 <b>AI MARKET VALUATION</b>",
     "val_comps_header": "🏘 <b>Analyzed comparable verified listings:</b>\n",
     "val_no_comps": "No comparable listings available.",
+    "val_payment_service_unconfigured": (
+        "📊 <b>AI Property Market Valuation</b>\n\n"
+        "This premium service is being integrated with official payment systems. "
+        "Payment settings are currently being finalized. Online payment via Click "
+        "and Payme will be available shortly."
+    ),
+    "val_order_summary_title": "📋 <b>Submitted Property Details:</b>",
+    "val_price_notice": (
+        "💰 <b>Service Fee:</b> {price} UZS\n\n"
+        "To receive full AI market analysis and valuation report, please choose your payment method:"
+    ),
+    "val_payment_pending": (
+        "⏳ <b>Payment not confirmed yet</b> (#{order_id}).\n\n"
+        "Please complete payment via Click or Payme. Once verified by the server, "
+        "your AI valuation report will appear here automatically."
+    ),
+    "val_payment_cancelled": "❌ Payment process cancelled.",
 }

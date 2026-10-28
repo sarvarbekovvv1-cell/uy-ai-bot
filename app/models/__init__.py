@@ -29,6 +29,7 @@ from app.models.lead import (
     LeadFollowUp,
     LeadNote,
 )
+from app.models.payment_transaction import PaymentTransaction
 from app.models.property import (
     CADASTRE_STATUSES,
     LISTING_TYPES,
@@ -41,6 +42,12 @@ from app.models.property import (
 from app.models.property_media import PropertyMedia
 from app.models.role import DEFAULT_CUSTOMER_ROLE, SYSTEM_ROLES, Role, UserRole
 from app.models.user import User
+from app.models.valuation_order import (
+    PAYMENT_PROVIDERS,
+    VALUATION_PAYMENT_STATUSES,
+    VALUATION_STATUSES,
+    ValuationOrder,
+)
 from app.models.viewing_request import (
     REQUEST_STATUSES,
     REQUEST_TYPES,
@@ -91,4 +98,9 @@ __all__ = [
     "KAIZEN_OUTCOMES",
     "KAIZEN_RECOMMENDATION_STATUSES",
     "KAIZEN_SEVERITIES",
+    "ValuationOrder",
+    "PaymentTransaction",
+    "VALUATION_PAYMENT_STATUSES",
+    "VALUATION_STATUSES",
+    "PAYMENT_PROVIDERS",
 ]

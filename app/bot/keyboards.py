@@ -1347,3 +1347,63 @@ def get_valuation_actions_keyboard(
     rows.append([InlineKeyboardButton(text=loc["menu"], callback_data="val_act:menu")])
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def get_valuation_payment_keyboard(
+    order_id: str,
+    click_url: str | None = None,
+    payme_url: str | None = None,
+    lang: str = "uz",
+) -> InlineKeyboardMarkup:
+    """Build payment options inline keyboard for monetized property valuation."""
+    click_label = (
+        "💳 Click orqali to‘lash"
+        if lang == "uz"
+        else ("💳 Оплатить через Click" if lang == "ru" else "💳 Pay via Click")
+    )
+    payme_label = (
+        "💳 Payme orqali to‘lash"
+        if lang == "uz"
+        else ("💳 Оплатить через Payme" if lang == "ru" else "💳 Pay via Payme")
+    )
+    check_label = (
+        "🔄 To‘lovni tekshirish"
+        if lang == "uz"
+        else ("🔄 Проверить оплату" if lang == "ru" else "🔄 Check payment")
+    )
+    cancel_label = (
+        "❌ Bekor qilish"
+        if lang == "uz"
+        else ("❌ Отменить" if lang == "ru" else "❌ Cancel")
+    )
+
+    rows: list[list[InlineKeyboardButton]] = []
+
+    # Click button
+    if click_url:
+        rows.append([InlineKeyboardButton(text=click_label, url=click_url)])
+    else:
+        rows.append(
+            [InlineKeyboardButton(text=click_label, callback_data=f"val_pay_click:{order_id}")]
+        )
+
+    # Payme button
+    if payme_url:
+        rows.append([InlineKeyboardButton(text=payme_label, url=payme_url)])
+    else:
+        rows.append(
+            [InlineKeyboardButton(text=payme_label, callback_data=f"val_pay_payme:{order_id}")]
+        )
+
+    # Check status button
+    rows.append(
+        [InlineKeyboardButton(text=check_label, callback_data=f"val_check_pay:{order_id}")]
+    )
+
+    # Cancel button
+    rows.append(
+        [InlineKeyboardButton(text=cancel_label, callback_data=f"val_cancel_pay:{order_id}")]
+    )
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+

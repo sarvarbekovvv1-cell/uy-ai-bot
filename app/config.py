@@ -95,6 +95,17 @@ class Settings(BaseSettings):
     # Media Storage Configuration
     media_storage_dir: str = Field(default=".cache/media", alias="MEDIA_STORAGE_DIR")
 
+    # Payment & Monetization Configuration
+    valuation_price_uzs: int = Field(default=0, alias="VALUATION_PRICE_UZS")
+    click_service_id: str = Field(default="", alias="CLICK_SERVICE_ID")
+    click_merchant_id: str = Field(default="", alias="CLICK_MERCHANT_ID")
+    click_secret_key: str = Field(default="", alias="CLICK_SECRET_KEY")
+    click_merchant_user_id: str = Field(default="", alias="CLICK_MERCHANT_USER_ID")
+    payme_merchant_id: str = Field(default="", alias="PAYME_MERCHANT_ID")
+    payme_secret_key: str = Field(default="", alias="PAYME_SECRET_KEY")
+    payme_test_mode: bool = Field(default=True, alias="PAYME_TEST_MODE")
+    payment_return_url: str = Field(default="", alias="PAYMENT_RETURN_URL")
+
     def get_admin_allowed_origins(self) -> list[str]:
         """Return list of allowed CORS origins for Admin Panel."""
         if not self.admin_allowed_origins:

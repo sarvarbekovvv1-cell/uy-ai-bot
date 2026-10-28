@@ -105,4 +105,5 @@ class PropertyValuationStates(StatesGroup):
     waiting_condition = State()
     waiting_floor = State()
     waiting_currency = State()
+    waiting_payment = State()
     viewing_result = State()
