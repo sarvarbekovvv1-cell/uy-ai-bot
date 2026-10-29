@@ -14,6 +14,8 @@ import type {
   LeadItem,
   LoginResponse,
   PaginatedResponse,
+  PaymentCardSettingItem,
+  PaymentCardSettingUpdateInput,
   PropertyCreateInput,
   PropertyDetail,
   PropertyListItem,
@@ -573,5 +575,18 @@ export const adminApi = {
         body: JSON.stringify({ action }),
       }
     );
+  },
+
+  async getPaymentSettings(): Promise<PaymentCardSettingItem> {
+    return request<PaymentCardSettingItem>("/api/admin/v1/payment-settings");
+  },
+
+  async updatePaymentSettings(
+    data: PaymentCardSettingUpdateInput
+  ): Promise<PaymentCardSettingItem> {
+    return request<PaymentCardSettingItem>("/api/admin/v1/payment-settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   },
 };

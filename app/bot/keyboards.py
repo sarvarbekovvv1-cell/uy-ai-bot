@@ -1407,3 +1407,46 @@ def get_valuation_payment_keyboard(
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+
+def get_valuation_package_keyboard(
+    standard_price: int,
+    premium_price: int,
+    lang: str = "uz",
+) -> InlineKeyboardMarkup:
+    """Build keyboard for choosing valuation service package."""
+    std_fmt = f"{standard_price:,}".replace(",", " ")
+    prem_fmt = f"{premium_price:,}".replace(",", " ")
+
+    if lang == "ru":
+        std_text = f"⚡ Стандарт — {std_fmt} сум"
+        prem_text = f"🚀 Эксперт — {prem_fmt} сум"
+        cancel_text = "❌ Отмена"
+    else:
+        std_text = f"⚡ Standart — {std_fmt} so‘m"
+        prem_text = f"🚀 Ekspert — {prem_fmt} so‘m"
+        cancel_text = "❌ Bekor qilish"
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=std_text, callback_data="val_pkg:standard")],
+            [InlineKeyboardButton(text=prem_text, callback_data="val_pkg:premium")],
+            [InlineKeyboardButton(text=cancel_text, callback_data="val_cancel")],
+        ]
+    )
+
+
+def get_valuation_receipt_keyboard(order_id: str, lang: str = "uz") -> InlineKeyboardMarkup:
+    """Build keyboard shown when waiting for receipt upload."""
+    if lang == "ru":
+        cancel_text = "❌ Отмена"
+    elif lang == "uz":
+        cancel_text = "❌ Bekor qilish"
+    else:
+        cancel_text = "❌ Cancel"
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=cancel_text, callback_data=f"val_cancel_pay:{order_id}")]
+        ]
+    )
+
+

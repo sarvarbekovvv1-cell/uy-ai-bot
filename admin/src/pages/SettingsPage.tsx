@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { adminApi } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
 export const SettingsPage: React.FC = () => {
@@ -16,6 +17,65 @@ export const SettingsPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Payment Card & Pricing state
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardHolder, setCardHolder] = useState("");
+  const [standardPrice, setStandardPrice] = useState(15000);
+  const [premiumPrice, setPremiumPrice] = useState(30000);
+  const [isPaymentActive, setIsPaymentActive] = useState(true);
+  const [paymentSettingsLoading, setPaymentSettingsLoading] = useState(false);
+  const [paymentSettingsSuccess, setPaymentSettingsSuccess] = useState<string | null>(null);
+  const [paymentSettingsError, setPaymentSettingsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    adminApi
+      .getPaymentSettings()
+      .then((data) => {
+        setCardNumber(data.card_number);
+        setCardHolder(data.card_holder);
+        setStandardPrice(data.standard_price_uzs);
+        setPremiumPrice(data.premium_price_uzs);
+        setIsPaymentActive(data.is_active);
+      })
+      .catch((err) => {
+        console.error("Failed to load payment settings:", err);
+      });
+  }, []);
+
+  const handlePaymentSettingsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPaymentSettingsError(null);
+    setPaymentSettingsSuccess(null);
+
+    const trimmedCard = cardNumber.trim();
+    if (!trimmedCard) {
+      setPaymentSettingsError("Karta raqamini kiriting.");
+      return;
+    }
+
+    setPaymentSettingsLoading(true);
+    try {
+      const updated = await adminApi.updatePaymentSettings({
+        card_number: trimmedCard,
+        card_holder: cardHolder.trim() || "Sarvar Bekov",
+        standard_price_uzs: Number(standardPrice),
+        premium_price_uzs: Number(premiumPrice),
+        is_active: isPaymentActive,
+      });
+      setPaymentSettingsSuccess("To'lov kartasi va tarif narxlari muvaffaqiyatli saqlandi!");
+      setCardNumber(updated.card_number);
+      setCardHolder(updated.card_holder);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setPaymentSettingsError(err.message);
+      } else {
+        setPaymentSettingsError("To'lov sozlamalarini saqlashda xatolik yuz berdi.");
+      }
+    } finally {
+      setPaymentSettingsLoading(false);
+    }
+  };
 
   const handleUsernameSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -379,6 +439,243 @@ export const SettingsPage: React.FC = () => {
               }}
             >
               {passwordLoading ? "Yangilanmoqda..." : "Parolni yangilash"}
+            </button>
+          </form>
+        </section>
+
+        {/* Payment Card & AI Valuation Pricing Card */}
+        <section
+          style={{
+            backgroundColor: "#1e293b",
+            borderRadius: "12px",
+            border: "1px solid #334155",
+            padding: "24px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#e2e8f0" }}>
+              💳 To'lov kartasi va AI baholash tariflari (P2P To'lov)
+            </h2>
+            <span
+              style={{
+                backgroundColor: isPaymentActive ? "#15803d" : "#64748b",
+                color: "#ffffff",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                padding: "4px 10px",
+                borderRadius: "9999px",
+              }}
+            >
+              {isPaymentActive ? "Faol" : "O'chirilgan"}
+            </span>
+          </div>
+
+          <p style={{ color: "#94a3b8", fontSize: "0.875rem", marginBottom: "20px" }}>
+            Mijozlar Telegram bot orqali uyini AI baholashdan o'tkazishda ushbu karta raqamiga to'lov qilishadi va to'lov chekini yuborishadi. Gemini AI chekni avtomatik tekshiradi.
+          </p>
+
+          {paymentSettingsSuccess && (
+            <div
+              style={{
+                padding: "12px 16px",
+                backgroundColor: "#064e3b",
+                border: "1px solid #059669",
+                borderRadius: "8px",
+                color: "#a7f3d0",
+                fontSize: "0.875rem",
+                marginBottom: "20px",
+              }}
+            >
+              ✅ {paymentSettingsSuccess}
+            </div>
+          )}
+
+          {paymentSettingsError && (
+            <div
+              style={{
+                padding: "12px 16px",
+                backgroundColor: "#450a0a",
+                border: "1px solid #dc2626",
+                borderRadius: "8px",
+                color: "#fca5a5",
+                fontSize: "0.875rem",
+                marginBottom: "20px",
+              }}
+            >
+              ❌ {paymentSettingsError}
+            </div>
+          )}
+
+          <form
+            onSubmit={handlePaymentSettingsSubmit}
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+          >
+            <div>
+              <label
+                htmlFor="card-number-input"
+                style={{
+                  display: "block",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: "#cbd5e1",
+                  marginBottom: "6px",
+                }}
+              >
+                Karta raqami (Uzcard / Humo):
+              </label>
+              <input
+                id="card-number-input"
+                type="text"
+                placeholder="masalan: 9860 1234 5678 9012"
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  backgroundColor: "#0f172a",
+                  border: "1px solid #334155",
+                  borderRadius: "8px",
+                  color: "#f8fafc",
+                  fontSize: "0.95rem",
+                  fontFamily: "monospace",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="card-holder-input"
+                style={{
+                  display: "block",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: "#cbd5e1",
+                  marginBottom: "6px",
+                }}
+              >
+                Karta egasi (Ism Familiya):
+              </label>
+              <input
+                id="card-holder-input"
+                type="text"
+                placeholder="masalan: SARVAR BEKOV"
+                value={cardHolder}
+                onChange={(e) => setCardHolder(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  backgroundColor: "#0f172a",
+                  border: "1px solid #334155",
+                  borderRadius: "8px",
+                  color: "#f8fafc",
+                  fontSize: "0.95rem",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div>
+                <label
+                  htmlFor="std-price-input"
+                  style={{
+                    display: "block",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    color: "#cbd5e1",
+                    marginBottom: "6px",
+                  }}
+                >
+                  ⚡ Standart baholash narxi (so'm):
+                </label>
+                <input
+                  id="std-price-input"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={standardPrice}
+                  onChange={(e) => setStandardPrice(Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    backgroundColor: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "8px",
+                    color: "#f8fafc",
+                    fontSize: "0.95rem",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="prem-price-input"
+                  style={{
+                    display: "block",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    color: "#cbd5e1",
+                    marginBottom: "6px",
+                  }}
+                >
+                  🚀 Ekspert hisobot narxi (so'm):
+                </label>
+                <input
+                  id="prem-price-input"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={premiumPrice}
+                  onChange={(e) => setPremiumPrice(Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    backgroundColor: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "8px",
+                    color: "#f8fafc",
+                    fontSize: "0.95rem",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px" }}>
+              <input
+                id="is-active-checkbox"
+                type="checkbox"
+                checked={isPaymentActive}
+                onChange={(e) => setIsPaymentActive(e.target.checked)}
+                style={{ width: "18px", height: "18px", cursor: "pointer" }}
+              />
+              <label
+                htmlFor="is-active-checkbox"
+                style={{ color: "#e2e8f0", fontSize: "0.875rem", cursor: "pointer" }}
+              >
+                AI uy baholash xizmatiga to'lov qabul qilishni yoqish
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={paymentSettingsLoading || !cardNumber}
+              style={{
+                alignSelf: "flex-start",
+                marginTop: "12px",
+                padding: "10px 24px",
+                backgroundColor: paymentSettingsLoading || !cardNumber ? "#475569" : "#2563eb",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                cursor: paymentSettingsLoading || !cardNumber ? "not-allowed" : "pointer",
+              }}
+            >
+              {paymentSettingsLoading ? "Saqlanmoqda..." : "Sozlamalarni saqlash"}
             </button>
           </form>
         </section>

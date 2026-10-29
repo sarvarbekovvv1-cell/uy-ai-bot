@@ -27,12 +27,18 @@ from app.services.payment.payme_service import (
     PAYME_STATE_PERFORMED,
     PaymePaymentService,
 )
+from app.services.payment.receipt_verification_service import (
+    ReceiptVerificationResult,
+    ReceiptVerificationService,
+)
 from app.services.payment.valuation_payment_service import ValuationPaymentService
 
 __all__ = [
     "ClickPaymentService",
     "PaymePaymentService",
     "ValuationPaymentService",
+    "ReceiptVerificationResult",
+    "ReceiptVerificationService",
     "CLICK_ERROR_SUCCESS",
     "CLICK_ERROR_SIGN_CHECK_FAILED",
     "CLICK_ERROR_INVALID_AMOUNT",

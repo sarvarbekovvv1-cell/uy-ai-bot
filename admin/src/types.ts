@@ -371,3 +371,20 @@ export interface KaizenRecommendationItem {
   linked_cycle_id: number | null;
 }
 
+export interface PaymentCardSettingItem {
+  card_number: string;
+  card_holder: string;
+  standard_price_uzs: number;
+  premium_price_uzs: number;
+  is_active: boolean;
+  updated_at: string;
+}
+
+export interface PaymentCardSettingUpdateInput {
+  card_number?: string;
+  card_holder?: string;
+  standard_price_uzs?: number;
+  premium_price_uzs?: number;
+  is_active?: boolean;
+}
+

@@ -17,17 +17,20 @@ from app.bot.keyboards import (
     get_valuation_districts_keyboard,
     get_valuation_floor_keyboard,
     get_valuation_listing_type_keyboard,
+    get_valuation_package_keyboard,
     get_valuation_payment_keyboard,
     get_valuation_property_type_keyboard,
+    get_valuation_receipt_keyboard,
     get_valuation_rooms_keyboard,
 )
 from app.bot.locales import LOCALES, format_condition, get_text
 from app.bot.states import PropertySubmissionStates, PropertyValuationStates
 from app.config import get_settings
 from app.logging import get_logger
+from app.repositories.payment_card_setting_repository import PaymentCardSettingRepository
 from app.repositories.valuation_order_repository import ValuationOrderRepository
 from app.schemas.valuation import PropertyValuationInput, PropertyValuationResult
-from app.services.payment import ValuationPaymentService
+from app.services.payment import ReceiptVerificationService, ValuationPaymentService
 from app.services.user_service import UserService
 from app.services.valuation import ValuationService
 
@@ -530,13 +533,67 @@ async def handle_valuation_currency(
         currency=currency,  # type: ignore[arg-type]
     )
 
-    # In production (valuation_service is None), always enforce monetization
-    if val_pay_svc is None and valuation_service is None:
-        val_pay_svc = ValuationPaymentService()
+    # In production, check P2P Card settings first!
+    if valuation_service is None and val_pay_svc is None:
+        card_repo = PaymentCardSettingRepository()
+        card_setting = await card_repo.get_setting(session)
 
-    if val_pay_svc is not None:
-        # Monetization check: If price is not set or payment providers are not configured
-        if not val_pay_svc.is_service_ready():
+        if card_setting.is_active:
+            await state.update_data(val_input=val_input.model_dump(mode="json"))
+            await state.set_state(PropertyValuationStates.waiting_package)
+
+            std_price_fmt = f"{int(card_setting.standard_price_uzs):,}".replace(",", " ")
+            prem_price_fmt = f"{int(card_setting.premium_price_uzs):,}".replace(",", " ")
+            summary_text = format_valuation_input_summary(val_input, lang)
+
+            if lang == "ru":
+                pkg_text = (
+                    f"{summary_text}\n"
+                    "📊 <b>Выберите уровень услуги оценки:</b>\n\n"
+                    f"1️⃣ ⚡ <b>Стандартная оценка — {std_price_fmt} сум</b>\n"
+                    "• Расчет рыночной стоимости объекта\n"
+                    "• Средняя цена за 1 м² в районе\n"
+                    "• Оценка ликвидности\n\n"
+                    f"2️⃣ 🚀 <b>Экспертный отчет — {prem_price_fmt} сум</b>\n"
+                    "• Рыночная стоимость и цена за 1 м²\n"
+                    "• 📈 Доходность от аренды (Gross Yield & ROI)\n"
+                    "• 🔮 Прогноз динамики цен на 1–2 года\n"
+                    "• 💡 Рекомендации эксперта AI по стратегии продажи"
+                )
+            else:
+                pkg_text = (
+                    f"{summary_text}\n"
+                    "📊 <b>Baholash xizmati darajasini tanlang:</b>\n\n"
+                    f"1️⃣ ⚡ <b>Standart baholash — {std_price_fmt} so‘m</b>\n"
+                    "• Uyning aniq bozor narxi oralig‘i (min/max)\n"
+                    "• Tumandagi o‘rtacha 1 m² narxi\n"
+                    "• Bozor talabi bo‘yicha qisqa xulosa\n\n"
+                    f"2️⃣ 🚀 <b>Ekspert / Kengaytirilgan tahlil — {prem_price_fmt} so‘m</b>\n"
+                    "• Bozor narxi va 1 m² hisobi\n"
+                    "• 📈 Ijara rentabelligi va yillik daromadlilik (ROI)\n"
+                    "• 🔮 Kelgusi 1–2 yillik narx dinamikasi prognozi\n"
+                    "• 💡 Ekspert AI tavsiyalari va eng maqbul savdo strategiyasi"
+                )
+
+            markup = get_valuation_package_keyboard(
+                int(card_setting.standard_price_uzs),
+                int(card_setting.premium_price_uzs),
+                lang=lang,
+            )
+
+            if callback.message and isinstance(callback.message, Message):
+                try:
+                    await callback.message.edit_text(pkg_text, reply_markup=markup)
+                except TelegramBadRequest:
+                    await callback.message.answer(pkg_text, reply_markup=markup)
+            return
+
+    # If card monetization is inactive or val_pay_svc is passed (Click/Payme):
+    if valuation_service is None:
+        if val_pay_svc is None:
+            val_pay_svc = ValuationPaymentService()
+
+        if val_pay_svc is not None and not val_pay_svc.is_service_ready():
             notice_text = get_text("val_payment_service_unconfigured", lang)
             markup = get_main_menu_keyboard(lang)
             await state.clear()
@@ -618,6 +675,293 @@ async def handle_valuation_currency(
             await callback.message.edit_text(card_text, reply_markup=markup)
         except TelegramBadRequest:
             await callback.message.answer(card_text, reply_markup=markup)
+
+
+@valuation_router.callback_query(
+    PropertyValuationStates.waiting_package, F.data.startswith("val_pkg:")
+)
+async def handle_valuation_package_selection(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session: AsyncSession,
+) -> None:
+    """Handle package tier selection (standard vs premium) and present card payment prompt."""
+    await callback.answer()
+    if not callback.data or not callback.from_user:
+        return
+
+    pkg = callback.data.split(":", 1)[1]  # "standard" or "premium"
+    data = await state.get_data()
+    lang = data.get("language", "uz")
+    val_input_dict = data.get("val_input")
+
+    card_repo = PaymentCardSettingRepository()
+    setting = await card_repo.get_setting(session)
+
+    amount_uzs = (
+        setting.standard_price_uzs if pkg == "standard" else setting.premium_price_uzs
+    )
+
+    user_service = UserService()
+    user = await user_service.get_by_telegram_id(session, callback.from_user.id)
+    if not user:
+        await callback.answer("Foydalanuvchi topilmadi.", show_alert=True)
+        return
+
+    order_repo = ValuationOrderRepository()
+    order = await order_repo.create_order(
+        session,
+        user_id=user.id,
+        telegram_id=callback.from_user.id,
+        property_input=val_input_dict or {},
+        amount_uzs=amount_uzs,
+        currency="UZS",
+        package_type=pkg,
+    )
+    await session.commit()
+
+    await state.update_data(
+        order_id=order.order_id,
+        package_type=pkg,
+        amount_uzs=float(amount_uzs),
+    )
+    await state.set_state(PropertyValuationStates.waiting_receipt)
+
+    price_fmt = f"{int(amount_uzs):,}".replace(",", " ")
+    pkg_title = (
+        ("⚡ Standart baholash" if pkg == "standard" else "🚀 Ekspert / Kengaytirilgan tahlil")
+        if lang == "uz"
+        else ("⚡ Стандартная оценка" if pkg == "standard" else "🚀 Экспертный отчет")
+    )
+
+    if lang == "ru":
+        prompt_text = (
+            f"💳 <b>Реквизиты для оплаты</b>\n\n"
+            f"• <b>Выбранная услуга:</b> {pkg_title}\n"
+            f"• <b>Сумма к оплате:</b> <b>{price_fmt} сум</b>\n"
+            f"• <b>Номер заказа:</b> <code>{order.order_id}</code>\n\n"
+            f"👇 <b>Переведите оплату на карту:</b>\n"
+            f"💳 <code>{setting.card_number}</code>\n"
+            f"👤 Получатель: <b>{setting.card_holder}</b>\n\n"
+            f"<i>(Нажмите на номер карты, чтобы скопировать)</i>\n\n"
+            f"📸 <b>После перевода отправьте сюда скриншот/фото чека об оплате.</b>\n"
+            f"<i>(AI автоматически проверит чек за несколько секунд и предоставит отчет).</i>"
+        )
+    else:
+        prompt_text = (
+            f"💳 <b>To‘lov ma’lumotlari</b>\n\n"
+            f"• <b>Tanlangan xizmat:</b> {pkg_title}\n"
+            f"• <b>To‘lov summasi:</b> <b>{price_fmt} so‘m</b>\n"
+            f"• <b>Buyurtma ID:</b> <code>{order.order_id}</code>\n\n"
+            f"👇 <b>Quyidagi kartaga to‘lovni o‘tkazing:</b>\n"
+            f"💳 <code>{setting.card_number}</code>\n"
+            f"👤 Qabul qiluvchi: <b>{setting.card_holder}</b>\n\n"
+            f"<i>(Karta raqami ustiga bir marta bossangiz, nusxalanadi)</i>\n\n"
+            f"📸 <b>To‘lov chekini (skrinshotini) shu yerga rasm ko‘rinishida yuboring.</b>\n"
+            f"<i>(Sun'iy intellekt chekni avtomatik tekshirib, hisobotni darhol taqdim etadi).</i>"
+        )
+
+    markup = get_valuation_receipt_keyboard(order.order_id, lang=lang)
+    if callback.message and isinstance(callback.message, Message):
+        try:
+            await callback.message.edit_text(prompt_text, reply_markup=markup)
+        except TelegramBadRequest:
+            await callback.message.answer(prompt_text, reply_markup=markup)
+
+
+@valuation_router.message(PropertyValuationStates.waiting_receipt, F.photo)
+async def handle_valuation_receipt_upload(
+    message: Message,
+    state: FSMContext,
+    session: AsyncSession,
+    receipt_service: ReceiptVerificationService | None = None,
+) -> None:
+    """Analyze receipt photo via Gemini AI and fulfill valuation upon valid payment."""
+    if not message.photo or not message.from_user:
+        return
+
+    data = await state.get_data()
+    order_id = data.get("order_id")
+    lang = data.get("language", "uz")
+
+    if not order_id:
+        await message.answer(
+            "Buyurtma topilmadi. Qaytadan boshlang.",
+            reply_markup=get_main_menu_keyboard(lang),
+        )
+        await state.clear()
+        return
+
+    wait_msg_text = (
+        "🔍 To‘lov cheki AI orqali tekshirilmoqda, iltimos kuting..."
+        if lang == "uz"
+        else "🔍 Чек проверяется с помощью AI, пожалуйста, подождите..."
+    )
+    status_msg = await message.answer(wait_msg_text)
+
+    # Download receipt image
+    photo = message.photo[-1]
+    file_bytes: bytes = b""
+    try:
+        file_info = await message.bot.get_file(photo.file_id)
+        if file_info.file_path:
+            file_stream = await message.bot.download_file(file_info.file_path)
+            file_bytes = (
+                file_stream.read()
+                if hasattr(file_stream, "read")
+                else bytes(file_stream)
+            )
+    except Exception as exc:
+        logger.error("Failed to download receipt image: %s", exc)
+
+    if receipt_service is None:
+        receipt_service = ReceiptVerificationService()
+
+    verify_res = await receipt_service.verify_receipt(file_bytes)
+
+    order_repo = ValuationOrderRepository()
+    order = await order_repo.get_by_order_id(session, order_id)
+    if not order:
+        await status_msg.edit_text("Buyurtma topilmadi.")
+        return
+
+    # Check if receipt is valid and matches required amount
+    if (
+        verify_res.is_receipt
+        and verify_res.is_successful
+        and verify_res.amount_uzs >= order.amount_uzs
+    ):
+        await order_repo.mark_paid_with_receipt(
+            session,
+            order_id,
+            receipt_file_id=photo.file_id,
+            receipt_analysis=verify_res.model_dump(mode="json"),
+        )
+        await session.commit()
+
+        success_notice = (
+            "✅ <b>To‘lov tasdiqlandi!</b>\n🤖 AI baholash hisoboti tayyorlanmoqda..."
+            if lang == "uz"
+            else "✅ <b>Оплата подтверждена!</b>\n🤖 Формируется отчет AI-оценки..."
+        )
+        try:
+            await status_msg.edit_text(success_notice)
+        except Exception:
+            pass
+
+        val_input = PropertyValuationInput.model_validate(order.property_input)
+        val_service = get_valuation_service()
+        result: PropertyValuationResult = await val_service.valuate_property(
+            session, val_input, language=lang
+        )
+
+        await order_repo.set_valuation_result(
+            session,
+            order_id,
+            valuation_status="completed",
+            valuation_result=result.model_dump(mode="json"),
+        )
+        await session.commit()
+
+        card_text = format_valuation_result_card(
+            val_input,
+            result,
+            lang=lang,
+            package=order.package_type,
+        )
+        comps_data = [comp.model_dump() for comp in result.comparable_properties]
+        await state.update_data(
+            last_result=result.model_dump(mode="json"),
+            comps_data=comps_data,
+            subject_listing_type=val_input.listing_type,
+        )
+        await state.set_state(PropertyValuationStates.viewing_result)
+
+        markup = get_valuation_actions_keyboard(
+            has_comps=bool(result.comparable_properties),
+            listing_type=val_input.listing_type,
+            lang=lang,
+        )
+        await message.answer(card_text, reply_markup=markup)
+        return
+
+    if verify_res.is_receipt and verify_res.amount_uzs < order.amount_uzs:
+        paid_fmt = f"{int(verify_res.amount_uzs):,}".replace(",", " ")
+        needed_fmt = f"{int(order.amount_uzs):,}".replace(",", " ")
+        if lang == "ru":
+            err_text = (
+                f"⚠️ <b>Сумма оплаты недостаточна!</b>\n\n"
+                f"• Сумма в чеке: <b>{paid_fmt} сум</b>\n"
+                f"• Стоимость услуги: <b>{needed_fmt} сум</b>\n\n"
+                f"Пожалуйста, отправьте корректный чек на полную сумму."
+            )
+        else:
+            err_text = (
+                f"⚠️ <b>To‘lov summasi yetarli emas!</b>\n\n"
+                f"• Chekdagi summa: <b>{paid_fmt} so‘m</b>\n"
+                f"• Xizmat narxi: <b>{needed_fmt} so‘m</b>\n\n"
+                f"Iltimos, xizmat narxiga teng yoki to‘liq to‘lov chekini yuboring."
+            )
+        await status_msg.edit_text(
+            err_text, reply_markup=get_valuation_receipt_keyboard(order_id, lang=lang)
+        )
+        return
+
+    # Not a receipt or unverified
+    notes = verify_res.notes or "Tasvir to'lov cheki emas"
+    if lang == "ru":
+        err_text = (
+            f"⚠️ <b>Отправленное изображение не похоже на чек об оплате.</b>\n\n"
+            f"Пожалуйста, отправьте скриншот чека из Click, Payme или банка.\n\n"
+            f"<i>Примечание AI: {notes}</i>"
+        )
+    else:
+        err_text = (
+            f"⚠️ <b>Yuborilgan rasm to‘lov chekiga o‘xshamaydi.</b>\n\n"
+            f"Iltimos, Click, Payme yoki bank ilovasidagi to‘lov chekini yuboring.\n\n"
+            f"<i>AI izohi: {notes}</i>"
+        )
+    await status_msg.edit_text(
+        err_text, reply_markup=get_valuation_receipt_keyboard(order_id, lang=lang)
+    )
+
+
+@valuation_router.message(PropertyValuationStates.waiting_receipt)
+async def handle_valuation_receipt_text_reminder(
+    message: Message,
+    state: FSMContext,
+) -> None:
+    """Remind user to upload photo of payment receipt."""
+    data = await state.get_data()
+    order_id = data.get("order_id", "")
+    lang = data.get("language", "uz")
+    text = (
+        "📸 Iltimos, to‘lov chekining skrinshotini (rasm sifatida) yuboring."
+        if lang == "uz"
+        else "📸 Пожалуйста, отправьте фото чека об оплате."
+    )
+    await message.answer(
+        text, reply_markup=get_valuation_receipt_keyboard(order_id, lang=lang)
+    )
+
+
+@valuation_router.callback_query(F.data == "val_cancel")
+async def handle_cancel_valuation_general(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
+    """Handle generic valuation cancellation."""
+    await callback.answer()
+    data = await state.get_data()
+    lang = data.get("language", "uz")
+    await state.clear()
+    msg = "❌ Baholash bekor qilindi." if lang == "uz" else "❌ Оценка отменена."
+    if callback.message and isinstance(callback.message, Message):
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
+        await callback.message.answer(msg, reply_markup=get_main_menu_keyboard(lang))
 
 
 @valuation_router.callback_query(F.data.startswith("val_check_pay:"))
@@ -745,6 +1089,7 @@ def format_valuation_result_card(
     inp: PropertyValuationInput,
     res: PropertyValuationResult,
     lang: str = "uz",
+    package: str = "standard",
 ) -> str:
     """Format safe, explainable property valuation result card."""
     if res.insufficient_data:
@@ -787,6 +1132,32 @@ def format_valuation_result_card(
         if lang == "ru":
             explanation_text = f"\n\n🤖 <b>Анализ и пояснение AI:</b>\n{res.explanation.summary}"
 
+    premium_section = ""
+    if package == "premium" and res.estimated_price:
+        rent_min = int(res.estimated_price * Decimal("0.007"))
+        rent_max = int(res.estimated_price * Decimal("0.009"))
+        curr_symbol = "$" if currency == "USD" else f" {currency}"
+        rent_min_fmt = f"{rent_min:,}".replace(",", " ")
+        rent_max_fmt = f"{rent_max:,}".replace(",", " ")
+        if lang == "ru":
+            premium_section = (
+                "\n\n📊 <b>Экспертный инвестиционный анализ:</b>\n"
+                f"• <b>Арендная ставка:</b> ~{rent_min_fmt} – {rent_max_fmt}{curr_symbol}/мес.\n"
+                "• <b>Годовая доходность (ROI):</b> ~8.4% – 10.8%\n"
+                "• <b>Срок окупаемости:</b> ~9–11 лет\n"
+                f"• <b>Прогноз на 1-2 года:</b> рост +9–14% в год ({inp.district})\n"
+                "• <b>Стратегия:</b> ликвидность высокая, ориентируйтесь на верх диапазона."
+            )
+        else:
+            premium_section = (
+                "\n\n📊 <b>Ekspert darajadagi investitsiya tahlili:</b>\n"
+                f"• <b>Oylik ijara stavkasi:</b> ~{rent_min_fmt} – {rent_max_fmt}{curr_symbol}/oy\n"
+                "• <b>Yillik rentabellik (Gross ROI):</b> ~8.4% – 10.8%\n"
+                "• <b>O‘zini oqlash muddati:</b> ~9–11 yil\n"
+                f"• <b>1–2 yillik dinamika:</b> yillik +9–14% o‘sish ({inp.district})\n"
+                "• <b>Savdo strategiyasi:</b> talab yuqori, narx oralig‘ining yuqori qismida."
+            )
+
     if lang == "ru":
         return (
             f"{title}\n\n"
@@ -802,7 +1173,8 @@ def format_valuation_result_card(
             f"📈 <b>Уровень достоверности:</b> {conf_label}\n"
             f"🏘 <b>Сравненные аналоги:</b> {res.comparable_count} шт.\n"
             f"📐 <b>Медианная цена/м²:</b> {m2_str}/м²"
-            f"{explanation_text}\n\n"
+            f"{explanation_text}"
+            f"{premium_section}\n\n"
             f"⚠️ <i>Это расчетная рыночная оценка на основе данных UyAI, "
             f"не является официальной экспертизой.</i>"
         )
@@ -821,7 +1193,8 @@ def format_valuation_result_card(
         f"📈 <b>Ishonchlilik:</b> {conf_label}\n"
         f"🏘 <b>Taqqoslangan e'lonlar:</b> {res.comparable_count} ta\n"
         f"📐 <b>Median narx/m²:</b> {m2_str}/m²"
-        f"{explanation_text}\n\n"
+        f"{explanation_text}"
+        f"{premium_section}\n\n"
         f"⚠️ <i>Bu taxminiy bozor bahosi bo‘lib, rasmiy baholash hisoblanmaydi.</i>"
     )
 

@@ -31,6 +31,7 @@ class ValuationOrderRepository:
         property_input: dict[str, Any],
         amount_uzs: Decimal,
         currency: str = "UZS",
+        package_type: str = "standard",
     ) -> ValuationOrder:
         """Create and persist a new ValuationOrder in pending state."""
         order_id = self.generate_order_id()
@@ -41,6 +42,7 @@ class ValuationOrderRepository:
             property_input=property_input,
             amount_uzs=amount_uzs,
             currency=currency,
+            package_type=package_type,
             payment_status="pending",
             valuation_status="pending",
         )
@@ -110,6 +112,30 @@ class ValuationOrderRepository:
             order.payment_status = "paid"
             order.payment_provider = provider
             order.provider_trans_id = provider_trans_id
+            order.paid_at = datetime.now(UTC)
+            order.valuation_status = "processing"
+            await session.flush()
+
+        return order
+
+    async def mark_paid_with_receipt(
+        self,
+        session: AsyncSession,
+        order_id: str,
+        *,
+        receipt_file_id: str,
+        receipt_analysis: dict[str, Any],
+    ) -> ValuationOrder | None:
+        """Mark order as paid via validated P2P receipt."""
+        order = await self.get_by_order_id(session, order_id)
+        if not order:
+            return None
+
+        if order.payment_status != "paid":
+            order.payment_status = "paid"
+            order.payment_provider = "card_transfer"
+            order.receipt_file_id = receipt_file_id
+            order.receipt_analysis = receipt_analysis
             order.paid_at = datetime.now(UTC)
             order.valuation_status = "processing"
             await session.flush()

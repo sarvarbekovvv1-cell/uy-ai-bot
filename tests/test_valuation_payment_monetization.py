@@ -155,6 +155,12 @@ async def test_valuation_unconfigured_payment_shows_safe_notice(
     dp = create_dispatcher()
     mock_bot = AsyncMock(spec=Bot)
 
+    from app.repositories.payment_card_setting_repository import PaymentCardSettingRepository
+
+    card_repo = PaymentCardSettingRepository()
+    await card_repo.update_setting(db_session, is_active=False)
+    await db_session.commit()
+
     # Walk through input wizard
     await dp.feed_update(
         mock_bot, make_msg_update(cust_tg_id, "📊 Uyimni baholash", 1), session=db_session
@@ -206,6 +212,12 @@ async def test_valuation_creates_order_and_renders_payment_options(
     cust_tg_id = setup_payment_test_data["customer_tg_id"]
     dp = create_dispatcher()
     mock_bot = AsyncMock(spec=Bot)
+
+    from app.repositories.payment_card_setting_repository import PaymentCardSettingRepository
+
+    card_repo = PaymentCardSettingRepository()
+    await card_repo.update_setting(db_session, is_active=False)
+    await db_session.commit()
 
     test_settings = Settings(
         VALUATION_PRICE_UZS=25000,

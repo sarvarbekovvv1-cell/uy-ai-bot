@@ -29,6 +29,7 @@ from app.models.lead import (
     LeadFollowUp,
     LeadNote,
 )
+from app.models.payment_card_setting import PaymentCardSetting
 from app.models.payment_transaction import PaymentTransaction
 from app.models.property import (
     CADASTRE_STATUSES,
@@ -100,6 +101,7 @@ __all__ = [
     "KAIZEN_SEVERITIES",
     "ValuationOrder",
     "PaymentTransaction",
+    "PaymentCardSetting",
     "VALUATION_PAYMENT_STATUSES",
     "VALUATION_STATUSES",
     "PAYMENT_PROVIDERS",

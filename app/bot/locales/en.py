@@ -368,7 +368,8 @@ MESSAGES: dict[str, str] = {
     "val_order_summary_title": "📋 <b>Submitted Property Details:</b>",
     "val_price_notice": (
         "💰 <b>Service Fee:</b> {price} UZS\n\n"
-        "To receive full AI market analysis and valuation report, please choose your payment method:"
+        "To receive full AI market analysis and valuation report, "
+        "please choose your payment method:"
     ),
     "val_payment_pending": (
         "⏳ <b>Payment not confirmed yet</b> (#{order_id}).\n\n"

@@ -23,7 +23,7 @@ from app.database.base import Base
 
 VALUATION_PAYMENT_STATUSES = ("pending", "paid", "failed", "cancelled")
 VALUATION_STATUSES = ("pending", "processing", "completed", "failed")
-PAYMENT_PROVIDERS = ("click", "payme")
+PAYMENT_PROVIDERS = ("click", "payme", "card_transfer")
 
 
 class ValuationOrder(Base):
@@ -52,12 +52,17 @@ class ValuationOrder(Base):
     # Pricing & Currency
     amount_uzs: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="UZS")
+    package_type: Mapped[str] = mapped_column(String(32), nullable=False, default="standard")
 
     # Payment lifecycle
     payment_provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
     provider_trans_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     payment_status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="pending", index=True
+    )
+    receipt_file_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    receipt_analysis: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
     )
 
     # Valuation execution lifecycle

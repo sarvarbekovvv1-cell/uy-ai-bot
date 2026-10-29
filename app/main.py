@@ -38,6 +38,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
         # Ensure roles and default admin account exist
         from sqlalchemy import select
+
         from app.database.session import get_session_factory
         from app.models.admin_auth import StaffCredential
         from app.models.user import User
@@ -84,9 +85,11 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.bot_token and settings.bot_token.strip():
         try:
             import asyncio
+
             from aiogram import Bot
             from aiogram.client.default import DefaultBotProperties
             from aiogram.enums import ParseMode
+
             from app.bot.dispatcher import create_dispatcher
 
             bot_instance = Bot(
