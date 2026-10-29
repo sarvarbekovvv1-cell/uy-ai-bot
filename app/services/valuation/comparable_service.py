@@ -143,3 +143,79 @@ class ComparablePropertyService:
         result3 = (await session.execute(stmt3)).scalars().all()
         scored3 = [(p, self.calculate_similarity(subject, p)) for p in result3]
         return scored3, 3
+
+    async def get_database_statistics(
+        self,
+        session: AsyncSession,
+        subject: PropertyValuationInput,
+    ) -> tuple[Decimal | None, int, str]:
+        """Aggregate empirical median price/m² from database when direct comparables fail.
+
+        Cascades:
+        1. District level (same district, same listing_type, property_type, currency).
+        2. Region level (same region, broader fallback).
+
+        Returns:
+            tuple[Decimal | None, int, str]: (median_price_per_m2, sample_count, method_name)
+        """
+        base_conditions = [
+            Property.status == "approved",
+            Property.listing_type == subject.listing_type,
+            Property.property_type == subject.property_type,
+            Property.currency == subject.currency,
+            Property.price > 0,
+            Property.total_area > 0,
+        ]
+        if subject.property_id:
+            base_conditions.append(Property.id != subject.property_id)
+
+        # 1. District level query
+        district_conditions = list(base_conditions)
+        district_conditions.append(
+            func.lower(Property.district) == subject.district.strip().lower()
+        )
+        if subject.region:
+            district_conditions.append(
+                func.lower(Property.region) == subject.region.strip().lower()
+            )
+
+        stmt_dist = (
+            select(Property.price, Property.total_area)
+            .where(*district_conditions)
+            .limit(MAX_CANDIDATES_FETCH)
+        )
+        dist_rows = (await session.execute(stmt_dist)).all()
+
+        if len(dist_rows) >= MIN_COMPARABLES_REQUIRED:
+            prices_m2 = sorted([r[0] / r[1] for r in dist_rows])
+            n = len(prices_m2)
+            med = (
+                prices_m2[n // 2]
+                if n % 2 != 0
+                else (prices_m2[n // 2 - 1] + prices_m2[n // 2]) / Decimal("2")
+            )
+            return med, n, "district_stats"
+
+        # 2. Region level query
+        if subject.region:
+            reg_conditions = list(base_conditions)
+            reg_conditions.append(
+                func.lower(Property.region) == subject.region.strip().lower()
+            )
+            stmt_reg = (
+                select(Property.price, Property.total_area)
+                .where(*reg_conditions)
+                .limit(MAX_CANDIDATES_FETCH)
+            )
+            reg_rows = (await session.execute(stmt_reg)).all()
+            if len(reg_rows) >= MIN_COMPARABLES_REQUIRED:
+                prices_m2 = sorted([r[0] / r[1] for r in reg_rows])
+                n = len(prices_m2)
+                med = (
+                    prices_m2[n // 2]
+                    if n % 2 != 0
+                    else (prices_m2[n // 2 - 1] + prices_m2[n // 2]) / Decimal("2")
+                )
+                return med, n, "regional_stats"
+
+        return None, 0, "insufficient"

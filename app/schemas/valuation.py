@@ -129,6 +129,8 @@ class ValuationSafeContext(BaseModel):
     comparison_tier: int
     factors: list[str]
     warnings: list[str]
+    valuation_method: str = "comparable"
+    source_description: str | None = None
 
 
 class PropertyValuationResult(BaseModel):
@@ -169,6 +171,13 @@ class PropertyValuationResult(BaseModel):
     comparable_properties: list[SafeComparableProperty] = Field(
         default_factory=list, description="Top approved comparables used."
     )
+    valuation_method: Literal[
+        "comparable", "district_stats", "regional_stats", "market_benchmark", "insufficient"
+    ] = Field(default="comparable", description="Valuation methodology used.")
+    source_description: str | None = Field(
+        default=None, description="Description of the empirical or benchmark data source."
+    )
+    sample_size: int = Field(default=0, description="Number of statistical samples used.")
     explanation: ValuationExplanation | None = Field(
         default=None, description="Safe narrative explanation from Gemini or fallback."
     )

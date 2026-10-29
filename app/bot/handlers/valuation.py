@@ -1170,7 +1170,12 @@ def format_valuation_result_card(
 ) -> str:
     """Format safe, explainable property valuation result card."""
     if res.insufficient_data:
-        return get_text("val_insufficient_data", lang)
+        summary_text = format_valuation_input_summary(inp, lang)
+        notice_text = get_text("val_insufficient_data", lang)
+        return (
+            f"{summary_text}\n\n"
+            f"⚠️ <b>{notice_text}</b>"
+        )
 
     title = get_text("val_card_title", lang)
     prop_type_label = "Kvartira" if inp.property_type == "apartment" else "Hovli / Uy"
@@ -1214,6 +1219,54 @@ def format_valuation_result_card(
             if lang == "uz"
             else (f"🏢 {floor_text} этаж\n" if lang == "ru" else f"🏢 Floor {floor_text}\n")
         )
+
+    # Method and source explanation
+    if lang == "ru":
+        if res.valuation_method == "comparable":
+            method_info = (
+                f"🏘 <b>Сравненные аналоги:</b> {res.comparable_count} шт.\n"
+                "ℹ️ <b>Метод:</b> Анализ прямых аналогов\n"
+            )
+        elif res.valuation_method == "district_stats":
+            method_info = (
+                f"📊 <b>Выборка:</b> {res.sample_size} объявл.\n"
+                "ℹ️ <b>Метод:</b> Районная статистика\n"
+                f"📌 <b>Источник:</b> {res.source_description}\n"
+            )
+        elif res.valuation_method == "regional_stats":
+            method_info = (
+                f"📊 <b>Выборка:</b> {res.sample_size} объявл.\n"
+                "ℹ️ <b>Метод:</b> Региональная статистика\n"
+                f"📌 <b>Источник:</b> {res.source_description}\n"
+            )
+        else:
+            method_info = (
+                "ℹ️ <b>Метод:</b> Районная рыночная статистика\n"
+                f"📌 <b>Источник:</b> {res.source_description}\n"
+            )
+    else:
+        if res.valuation_method == "comparable":
+            method_info = (
+                f"🏘 <b>Taqqoslangan e'lonlar:</b> {res.comparable_count} ta\n"
+                "ℹ️ <b>Usul:</b> Taqqoslama e'lonlar tahlili\n"
+            )
+        elif res.valuation_method == "district_stats":
+            method_info = (
+                f"📊 <b>Statistik namuna:</b> {res.sample_size} ta e'lon\n"
+                "ℹ️ <b>Usul:</b> Tuman statistik mediani\n"
+                f"📌 <b>Manba:</b> {res.source_description}\n"
+            )
+        elif res.valuation_method == "regional_stats":
+            method_info = (
+                f"📊 <b>Statistik namuna:</b> {res.sample_size} ta e'lon\n"
+                "ℹ️ <b>Usul:</b> Shahar/viloyat statistik mediani\n"
+                f"📌 <b>Manba:</b> {res.source_description}\n"
+            )
+        else:
+            method_info = (
+                "ℹ️ <b>Usul:</b> Hududiy bozor statistikasi\n"
+                f"📌 <b>Manba:</b> {res.source_description}\n"
+            )
 
     explanation_text = ""
     if res.explanation and res.explanation.summary:
@@ -1259,7 +1312,8 @@ def format_valuation_result_card(
                 f"🎯 <b>Ориентировочная рыночная стоимость:</b>\n"
                 f"<b>{central_str}</b>\n\n"
                 f"📐 <b>Средняя цена за 1 м²:</b> {m2_str}/м²\n"
-                f"📈 <b>Уровень достоверности:</b> {conf_label}"
+                f"📈 <b>Уровень достоверности:</b> {conf_label}\n"
+                f"{method_info}"
                 f"{explanation_text}\n\n"
                 f"⚠️ <i>Это базовая расчетная оценка на основе данных UyAI.</i>"
             )
@@ -1277,8 +1331,8 @@ def format_valuation_result_card(
             f"🎯 <b>Центральная оценка:</b>\n"
             f"<b>{central_str}</b>\n\n"
             f"📈 <b>Уровень достоверности:</b> {conf_label}\n"
-            f"🏘 <b>Сравненные аналоги:</b> {res.comparable_count} шт.\n"
-            f"📐 <b>Медианная цена/м²:</b> {m2_str}/м²"
+            f"📐 <b>Медианная цена/м²:</b> {m2_str}/м²\n"
+            f"{method_info}"
             f"{explanation_text}"
             f"{premium_section}\n\n"
             f"⚠️ <i>Это расчетная рыночная оценка на основе данных UyAI, "
@@ -1296,7 +1350,8 @@ def format_valuation_result_card(
             f"🎯 <b>Taxminiy bozor bahosi:</b>\n"
             f"<b>{central_str}</b>\n\n"
             f"📐 <b>O‘rtacha 1 m² narxi:</b> {m2_str}/m²\n"
-            f"📈 <b>Ishonchlilik:</b> {conf_label}"
+            f"📈 <b>Ishonchlilik:</b> {conf_label}\n"
+            f"{method_info}"
             f"{explanation_text}\n\n"
             f"⚠️ <i>Bu bazaviy AI bahosi bo‘lib, rasmiy baholash hisoblanmaydi.</i>"
         )
@@ -1314,8 +1369,8 @@ def format_valuation_result_card(
         f"🎯 <b>Markaziy baho:</b>\n"
         f"<b>{central_str}</b>\n\n"
         f"📈 <b>Ishonchlilik:</b> {conf_label}\n"
-        f"🏘 <b>Taqqoslangan e'lonlar:</b> {res.comparable_count} ta\n"
-        f"📐 <b>Median narx/m²:</b> {m2_str}/m²"
+        f"📐 <b>Median narx/m²:</b> {m2_str}/m²\n"
+        f"{method_info}"
         f"{explanation_text}"
         f"{premium_section}\n\n"
         f"⚠️ <i>Bu taxminiy bozor bahosi bo‘lib, rasmiy baholash hisoblanmaydi.</i>"

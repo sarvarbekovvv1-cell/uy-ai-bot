@@ -2,6 +2,7 @@
 
 import math
 from decimal import ROUND_HALF_UP, Decimal
+from typing import Literal
 
 from app.models.property import Property
 from app.schemas.valuation import (
@@ -327,4 +328,113 @@ class ValuationEngine:
             warnings=warnings,
             insufficient_data=False,
             comparable_properties=safe_comps,
+            valuation_method="comparable",
+            source_description=f"Tasdiqlangan {count} ta taqqoslama e'lon",
+            sample_size=count,
+        )
+
+    def calculate_from_statistics(
+        self,
+        input_data: PropertyValuationInput,
+        median_price_per_m2: Decimal,
+        sample_size: int,
+        valuation_method: Literal["district_stats", "regional_stats", "market_benchmark"],
+        source_description: str,
+    ) -> PropertyValuationResult:
+        """Calculate authoritative valuation estimate using empirical or benchmark median."""
+        base_m2 = median_price_per_m2
+        curr = input_data.currency
+        fmt_m2 = f"{int(base_m2):,}".replace(",", " ")
+        factors: list[str] = [
+            f"Boshlang‘ich median narx: {fmt_m2} {curr}/m²"
+        ]
+        warnings: list[str] = []
+
+        # Floor adjustment (ground floor: -4%, top floor: -4%, middle floor: +2%)
+        floor_adj = Decimal("0")
+        if input_data.floor and input_data.total_floors:
+            if input_data.floor == 1:
+                floor_adj = Decimal("-0.04")
+                factors.append("Birinchi qavat omili (-4%)")
+            elif input_data.floor == input_data.total_floors and input_data.total_floors > 1:
+                floor_adj = Decimal("-0.04")
+                factors.append("Oxirgi qavat omili (-4%)")
+            elif 1 < input_data.floor < input_data.total_floors:
+                floor_adj = Decimal("0.02")
+                factors.append("O‘rta qavat qulayligi (+2%)")
+
+        # Condition adjustment
+        cond_adj = CONDITION_ADJUSTMENTS.get(input_data.condition, Decimal("0"))
+        if cond_adj != Decimal("0"):
+            cond_pct = int(cond_adj * 100)
+            factors.append(f"Ta'mir holati ta'siri ({cond_pct:+}%)")
+
+        # Compactness / room adjustment
+        room_adj = Decimal("0")
+        if input_data.total_area <= Decimal("60") and input_data.rooms <= 2:
+            room_adj = Decimal("0.02")
+            factors.append("Kichik/ixcham maydon likvidligi (+2%)")
+        elif input_data.total_area >= Decimal("120"):
+            room_adj = Decimal("-0.02")
+            factors.append("Katta maydon hajmi (-2%)")
+
+        total_adjustment = floor_adj + cond_adj + room_adj
+        adjusted_m2 = base_m2 * (Decimal("1") + total_adjustment)
+        raw_est = adjusted_m2 * input_data.total_area
+
+        # Confidence and spread
+        if valuation_method == "district_stats" and sample_size >= 4:
+            confidence = "medium"
+            spread = RANGE_PERCENT_MEDIUM
+            warnings.append(
+                f"Hisob-kitob {input_data.district} tumanidagi {sample_size} ta "
+                "tasdiqlangan e'lon statistik medianiga asoslandi."
+            )
+        elif valuation_method == "district_stats":
+            confidence = "low"
+            spread = RANGE_PERCENT_LOW
+            warnings.append(
+                f"Hisob-kitob {input_data.district} tumanidagi cheklangan "
+                f"e'lonlar ({sample_size} ta) statistikasiga asoslandi."
+            )
+        elif valuation_method == "regional_stats":
+            confidence = "low"
+            spread = RANGE_PERCENT_LOW
+            warnings.append(
+                f"Tuman bo‘yicha e'lonlar yetarli bo‘lmagani sababli hisob-kitob "
+                f"{input_data.region} shahar/viloyat statistik medianiga asoslandi."
+            )
+        else:
+            confidence = "low"
+            spread = RANGE_PERCENT_LOW
+            warnings.append(
+                "Alohida taqqoslama e'lonlar yetarli bo‘lmagani sababli hisob-kitob "
+                "hududiy bozor statistikasi (benchmark) asosida bajarildi."
+            )
+
+        raw_min = raw_est * (Decimal("1") - spread)
+        raw_max = raw_est * (Decimal("1") + spread)
+
+        # Round to appropriate currency precision
+        is_rent = input_data.listing_type == "rent"
+        rounded_est = self.round_price(raw_est, input_data.currency, is_rent)
+        rounded_min = self.round_price(raw_min, input_data.currency, is_rent)
+        rounded_max = self.round_price(raw_max, input_data.currency, is_rent)
+
+        return PropertyValuationResult(
+            estimated_price=rounded_est,
+            estimated_min_price=rounded_min,
+            estimated_max_price=rounded_max,
+            currency=input_data.currency,
+            confidence=confidence,
+            comparable_count=sample_size,
+            median_price_per_m2=adjusted_m2.quantize(Decimal("0.01")),
+            comparison_tier=2 if valuation_method == "district_stats" else 3,
+            factors=factors,
+            warnings=warnings,
+            insufficient_data=False,
+            comparable_properties=[],
+            valuation_method=valuation_method,
+            source_description=source_description,
+            sample_size=sample_size,
         )

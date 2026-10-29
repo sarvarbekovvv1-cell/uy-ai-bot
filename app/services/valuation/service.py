@@ -60,16 +60,23 @@ class ValuationService:
     ) -> ValuationExplanation:
         """Construct deterministic, localized fallback explanation when LLM is unavailable."""
         if result.insufficient_data:
+            param_desc = (
+                f"{input_data.district}, {input_data.rooms} xona, {input_data.total_area} m²"
+            )
+            if input_data.floor and input_data.total_floors:
+                param_desc += f", {input_data.floor}/{input_data.total_floors}-qavat"
+
             if language == "ru":
                 return ValuationExplanation(
                     summary=(
-                        f"Недостаточно данных для оценки объекта в районе {input_data.district}. "
-                        "В базе найдено менее 2 одобренных аналогичных объявлений."
+                        f"По параметрам объекта ({param_desc}) в базе данных и рыночной статистике "
+                        "пока недостаточно данных для точной оценки."
                     ),
                     positive_factors=[],
-                    negative_factors=["Отсутствие достаточного количества активных аналогов"],
+                    negative_factors=["Недостаточное количество активных аналогов на рынке"],
                     missing_information=[
-                        "Активные объявления со схожими параметрами площади и комнатности"
+                        f"Близкие аналоги по площади ({input_data.total_area} м²) и локации",
+                        "Региональная статистика цен",
                     ],
                     recommendation=(
                         "Рекомендуем уточнить параметры поиска или обратиться напрямую к брокеру."
@@ -77,12 +84,15 @@ class ValuationService:
                 )
             return ValuationExplanation(
                 summary=(
-                    f"{input_data.district} tumani bo‘yicha baholash uchun tasdiqlangan "
-                    "o‘xshash e'lonlar yetarli emas (kamida 2 ta e'lon zarur)."
+                    f"Kiritilgan parametrlar ({param_desc}) bo‘yicha "
+                    "bazada va bozor statistikasida aniq baholash uchun ma'lumotlar yetarli emas."
                 ),
                 positive_factors=[],
                 negative_factors=["Bozorda o‘xshash faol e'lonlar sonining kamligi"],
-                missing_information=["Maydon va xonalar soni bo‘yicha yaqin faol e'lonlar"],
+                missing_information=[
+                    f"Maydon ({input_data.total_area} m²) va qavat bo‘yicha yaqin faol e'lonlar",
+                    "Hududiy bozor narx statistikasi",
+                ],
                 recommendation=(
                     "Parametrlarni kengaytirish yoki mutaxassis broker bilan maslahatlashish "
                     "tavsiya etiladi."
@@ -95,20 +105,38 @@ class ValuationService:
         )
 
         if language == "ru":
-            tier_desc = (
-                f"в районе {input_data.district}"
-                if result.comparison_tier in (1, 2)
-                else f"в регионе {input_data.region}"
-            )
+            if result.valuation_method == "market_benchmark":
+                method_desc = f"официальной рыночной статистике по району {input_data.district}"
+            elif result.valuation_method == "district_stats":
+                method_desc = (
+                    f"статистике {result.sample_size} объявлений района {input_data.district}"
+                )
+            elif result.valuation_method == "regional_stats":
+                method_desc = (
+                    f"статистике {result.sample_size} объявлений региона {input_data.region}"
+                )
+            else:
+                tier_desc = (
+                    f"в районе {input_data.district}"
+                    if result.comparison_tier in (1, 2)
+                    else f"в регионе {input_data.region}"
+                )
+                method_desc = f"{result.comparable_count} аналогов {tier_desc}"
+
+            factors_extra = [
+                f
+                for f in result.factors
+                if any(k in f for k in ("omili", "ta'siri", "qulayligi", "likvidligi"))
+            ]
             return ValuationExplanation(
                 summary=(
-                    f"Расчет выполнен на основе {result.comparable_count} аналогов {tier_desc}. "
+                    f"Расчет выполнен на основе {method_desc}. "
                     f"Диапазон: {range_str}. Достоверность: {result.confidence}."
                 ),
                 positive_factors=[
                     f"Локация: {input_data.district}",
                     f"Количество комнат: {input_data.rooms}",
-                ],
+                ] + factors_extra,
                 negative_factors=[
                     "Рыночные колебания и индивидуальные особенности объекта",
                 ],
@@ -120,20 +148,42 @@ class ValuationService:
                 ),
             )
 
-        tier_desc = (
-            f"{input_data.district} tumani"
-            if result.comparison_tier in (1, 2)
-            else f"{input_data.region} hududi"
-        )
+        if result.valuation_method == "market_benchmark":
+            method_desc = (
+                f"{input_data.district} tumani bo‘yicha rasmiy bozor statistikasi ma'lumotlariga"
+            )
+        elif result.valuation_method == "district_stats":
+            method_desc = (
+                f"{input_data.district} tumanidagi {result.sample_size} ta "
+                "e'lon statistikasi ma'lumotlariga"
+            )
+        elif result.valuation_method == "regional_stats":
+            method_desc = (
+                f"{input_data.region} hududidagi {result.sample_size} ta "
+                "e'lon statistikasi ma'lumotlariga"
+            )
+        else:
+            tier_desc = (
+                f"{input_data.district} tumani"
+                if result.comparison_tier in (1, 2)
+                else f"{input_data.region} hududi"
+            )
+            method_desc = f"{tier_desc} bo‘yicha {result.comparable_count} ta o‘xshash e'longa"
+
+        factors_extra = [
+            f
+            for f in result.factors
+            if any(k in f for k in ("omili", "ta'siri", "qulayligi", "likvidligi"))
+        ]
         return ValuationExplanation(
             summary=(
-                f"Baholash {tier_desc} bo‘yicha {result.comparable_count} ta o‘xshash e'longa "
+                f"Baholash {method_desc} "
                 f"asoslandi. Bozor oralig‘i: {range_str}. Ishonchlilik: {result.confidence}."
             ),
             positive_factors=[
                 f"Joylashuv: {input_data.district}",
                 f"Xonalar soni: {input_data.rooms} xona",
-            ],
+            ] + factors_extra,
             negative_factors=[
                 "Bozor narxlarining mavsumiy tebranishlari",
             ],
@@ -152,19 +202,69 @@ class ValuationService:
         input_data: PropertyValuationInput,
         language: str = "uz",
     ) -> PropertyValuationResult:
-        """Perform end-to-end valuation of property."""
-        # Step 1: Discover approved comparables
+        """Perform end-to-end multi-method valuation of property.
+
+        Cascade:
+        Method A: Direct matching approved comparable listings (Tier 1-3).
+        Method B: Database district or regional empirical price/m² statistics.
+        Method C: Authoritative district-level benchmark statistics (Tashkent City).
+        Method D: Insufficient data handling (no synthetic hallucinated prices).
+        """
+        # Step 1: Discover approved direct comparables
         comparables, tier = await self.comparable_service.find_comparables(session, input_data)
 
-        # Step 2: Deterministic numeric valuation
+        # Step 2: Deterministic numeric valuation using direct comparables
         result = self.engine.calculate(input_data, comparables, tier)
 
-        # Step 3: Handle insufficient data
+        # Step 3: Multi-method fallback cascade when direct comparables are insufficient
         if result.insufficient_data:
-            result.explanation = self.build_fallback_explanation(
-                input_data, result, language=language
+            # Stage B: Database district or regional empirical price/m² statistics
+            stat_m2, sample_count, stat_method = (
+                await self.comparable_service.get_database_statistics(session, input_data)
             )
-            return result
+            if stat_m2 is not None and sample_count >= 2:
+                source_desc = (
+                    f"Bazada tasdiqlangan {sample_count} ta {input_data.district} "
+                    "tumani e'lonlari statistikasi"
+                    if stat_method == "district_stats"
+                    else f"Bazada tasdiqlangan {sample_count} ta {input_data.region} "
+                    "hududiy e'lonlari statistikasi"
+                )
+                result = self.engine.calculate_from_statistics(
+                    input_data=input_data,
+                    median_price_per_m2=stat_m2,
+                    sample_size=sample_count,
+                    valuation_method=stat_method,
+                    source_description=source_desc,
+                )
+            else:
+                # Stage C: Authoritative district-level benchmark statistics (Tashkent City)
+                from app.services.valuation.district_benchmarks import (
+                    get_district_market_benchmark,
+                )
+
+                bench_m2, bench_desc = get_district_market_benchmark(
+                    district=input_data.district,
+                    region=input_data.region,
+                    listing_type=input_data.listing_type,
+                    property_type=input_data.property_type,
+                    currency=input_data.currency,
+                )
+                if bench_m2 is not None:
+                    result = self.engine.calculate_from_statistics(
+                        input_data=input_data,
+                        median_price_per_m2=bench_m2,
+                        sample_size=15,
+                        valuation_method="market_benchmark",
+                        source_description=bench_desc
+                        or f"{input_data.district} tumani bozor statistikasi",
+                    )
+                else:
+                    # Stage D: Truly insufficient data -> Do NOT invent fake prices
+                    result.explanation = self.build_fallback_explanation(
+                        input_data, result, language=language
+                    )
+                    return result
 
         # Step 4: Optional AI narrative explanation
         if self.llm_provider:
@@ -198,6 +298,8 @@ class ValuationService:
                 comparison_tier=result.comparison_tier,
                 factors=result.factors,
                 warnings=result.warnings,
+                valuation_method=result.valuation_method,
+                source_description=result.source_description,
             )
 
             try:

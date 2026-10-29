@@ -401,3 +401,64 @@ def test_iqr_outliers_exact_sample_cases() -> None:
     ]
     filtered2 = engine.filter_outliers(items2)
     assert len(filtered2) == 3
+
+
+def test_calculate_from_statistics_floor_adjustments() -> None:
+    """Verify statistical engine floor adjustments:
+
+    - Middle floor (2/9): +2%
+    - 1st floor (1/9): -4%
+    - Top floor (9/9): -4%
+    """
+    engine = ValuationEngine()
+    base_inp = PropertyValuationInput(
+        listing_type="sale",
+        property_type="apartment",
+        region="Toshkent shahri",
+        district="Yunusobod",
+        total_area=Decimal("56"),
+        rooms=2,
+        condition="renovated",
+        currency="USD",
+    )
+
+    # 1. Middle floor (2/9)
+    inp_mid = base_inp.model_copy(update={"floor": 2, "total_floors": 9})
+    res_mid = engine.calculate_from_statistics(
+        input_data=inp_mid,
+        median_price_per_m2=Decimal("1000"),
+        sample_size=15,
+        valuation_method="market_benchmark",
+        source_description="Yunusobod tumani rasmiy bozor benchmarki",
+    )
+    assert res_mid.insufficient_data is False
+    assert res_mid.estimated_price is not None
+    # Base: 56 * 1000 = 56,000. Floor 2/9 gives +2%: 56,000 * 1.02 = 57,120 -> rounded: 57,000
+    assert any("O‘rta qavat qulayligi (+2%)" in f for f in res_mid.factors)
+
+    # 2. Ground floor (1/9)
+    inp_ground = base_inp.model_copy(update={"floor": 1, "total_floors": 9})
+    res_ground = engine.calculate_from_statistics(
+        input_data=inp_ground,
+        median_price_per_m2=Decimal("1000"),
+        sample_size=15,
+        valuation_method="market_benchmark",
+        source_description="Yunusobod tumani rasmiy bozor benchmarki",
+    )
+    # Ground floor gives -4%
+    assert any("Birinchi qavat omili (-4%)" in f for f in res_ground.factors)
+    assert res_ground.estimated_price < res_mid.estimated_price
+
+    # 3. Top floor (9/9)
+    inp_top = base_inp.model_copy(update={"floor": 9, "total_floors": 9})
+    res_top = engine.calculate_from_statistics(
+        input_data=inp_top,
+        median_price_per_m2=Decimal("1000"),
+        sample_size=15,
+        valuation_method="market_benchmark",
+        source_description="Yunusobod tumani rasmiy bozor benchmarki",
+    )
+    # Top floor gives -4%
+    assert any("Oxirgi qavat omili (-4%)" in f for f in res_top.factors)
+    assert res_top.estimated_price < res_mid.estimated_price
+

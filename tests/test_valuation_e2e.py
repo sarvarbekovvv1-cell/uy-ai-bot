@@ -781,3 +781,93 @@ async def test_start_command_resets_valuation_flow(
     full_output = " ".join(texts)
     assert "Hush kelibsiz" in full_output or "Asosiy menyu" in full_output
     assert await fsm_ctx.get_state() is None
+
+
+@pytest.mark.asyncio
+async def test_fallback_valuation_for_56m2_floor_2_9(
+    setup_valuation_db: dict[str, int],
+    db_session: AsyncSession,
+) -> None:
+    """Verify 56 m2, 2/9 floor property in Yunusobod (0 direct DB comparables)
+
+    gracefully falls back to district market statistics (Method C), applies floor adjustments,
+    calculates realistic price range, and displays all property parameters properly.
+    """
+    user_id = setup_valuation_db["customer_uz"]
+    dp = create_dispatcher()
+    mock_bot = AsyncMock(spec=Bot)
+
+    # 1. Start standard valuation
+    await dp.feed_update(
+        mock_bot, make_msg_update(user_id, "📊 Uyimni baholash", 1), session=db_session
+    )
+    # 2. Sale
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_lt:sale", 2), session=db_session)
+    # 3. Apartment
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_pt:apartment", 3), session=db_session
+    )
+    # 4. District: Yunusobod (has 0 direct comparable listings in setup_valuation_db)
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_dst:Yunusobod", 4), session=db_session
+    )
+    # 5. Rooms: 2
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_rooms:2", 5), session=db_session)
+    # 6. Area: 56
+    await dp.feed_update(mock_bot, make_msg_update(user_id, "56", 6), session=db_session)
+    # 7. Condition: renovated
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_cond:renovated", 7), session=db_session
+    )
+    # 8. Floor: 2/9
+    await dp.feed_update(mock_bot, make_msg_update(user_id, "2/9", 8), session=db_session)
+
+    # 9. Currency: USD
+    mock_bot.reset_mock()
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_curr:USD", 9), session=db_session)
+
+    texts = extract_bot_texts(mock_bot)
+    full_output = " ".join(texts)
+
+    # Must NOT halt with "Taqqoslama ma’lumotlar yetarli emas"
+    assert "Taqqoslama ma’lumotlar yetarli emas" not in full_output
+    assert "Taxminiy bozor qiymati" in full_output or "AI BOZOR BAHOSI" in full_output
+    assert "56 m²" in full_output  # Area must be shown
+    assert "2/9 qavat" in full_output  # Floor must be shown
+    assert "Yunusobod" in full_output
+    # Confidence level
+    assert "Ishonchlilik" in full_output
+
+
+@pytest.mark.asyncio
+async def test_unknown_location_does_not_hallucinate_fake_price(
+    db_session: AsyncSession,
+) -> None:
+    """When property is in an unknown location with zero DB listings and zero benchmarks,
+
+    the system must explain insufficient data clearly and NOT hallucinate a random price.
+    """
+    from app.schemas.valuation import PropertyValuationInput
+
+    service = ValuationService(llm_provider=None)
+    inp = PropertyValuationInput(
+        listing_type="sale",
+        property_type="apartment",
+        region="Noma'lum viloyat",
+        district="Noma'lum tuman",
+        total_area=Decimal("56"),
+        rooms=2,
+        floor=2,
+        total_floors=9,
+        currency="USD",
+    )
+
+    result = await service.valuate_property(db_session, inp, language="uz")
+
+    assert result.insufficient_data is True
+    assert result.estimated_price is None
+    assert result.explanation is not None
+    assert "Noma'lum tuman" in result.explanation.summary
+    assert "56 m²" in result.explanation.summary
+    assert "2/9-qavat" in result.explanation.summary
+
