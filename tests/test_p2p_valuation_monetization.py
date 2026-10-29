@@ -59,10 +59,15 @@ def fsm_context() -> FSMContext:
 async def test_payment_card_setting_configured_logic(db_session: AsyncSession) -> None:
     """Test payment card repository and is_configured detection."""
     repo = PaymentCardSettingRepository()
-    setting = await repo.get_setting(db_session)
 
-    # If card_number is empty or placeholder, is_configured() is False
-    assert setting.is_configured() is False
+    # When card is empty or placeholder, is_configured() is False
+    unconfigured = await repo.update_setting(
+        db_session,
+        card_number="9860 0000 0000 0000",
+        card_holder="Dummy",
+        is_active=False,
+    )
+    assert unconfigured.is_configured() is False
 
     # Update with real credentials
     updated = await repo.update_setting(
@@ -142,6 +147,7 @@ async def test_bot_currency_step_unconfigured_card_shows_safe_message(
     await fsm_context.set_state(PropertyValuationStates.waiting_currency)
 
     callback_msg = AsyncMock(spec=Message)
+    callback_msg.edit_text = AsyncMock()
     callback_msg.answer = AsyncMock()
 
     tg_user = TgUser(id=sample_user.telegram_id, is_bot=False, first_name="Test")
@@ -510,9 +516,94 @@ async def test_admin_api_approve_and_reject_flow(
             assert rej_refreshed.payment_status == "rejected"
             assert rej_refreshed.admin_notes == "Chekdagi summa mos emas va pul tushmagan."
 
+            # 4. Test idempotency: second approval returns already_approved
+            second_approve = await client.post(
+                f"/api/admin/v1/valuation-orders/{order.order_id}/approve",
+                json={"notes": "Duplicate click"},
+            )
+            assert second_approve.status_code == 200
+            assert second_approve.json()["status"] == "already_approved"
+
+            # 5. Test idempotency: second rejection returns already_rejected
+            second_reject = await client.post(
+                f"/api/admin/v1/valuation-orders/{rej_order.order_id}/reject",
+                json={"reason": "Duplicate reject click"},
+            )
+            assert second_reject.status_code == 200
+            assert second_reject.json()["status"] == "already_rejected"
+
     finally:
         app.dependency_overrides.pop(check_valuation_order_perm, None)
         app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_bot_receipt_document_upload_success(
+    db_session: AsyncSession,
+    sample_user: User,
+    fsm_context: FSMContext,
+) -> None:
+    """Test sending receipt as uncompressed document also sets pending_verification."""
+    from aiogram.types import Document
+
+    order_repo = ValuationOrderRepository()
+    order = await order_repo.create_order(
+        db_session,
+        user_id=sample_user.id,
+        telegram_id=sample_user.telegram_id,
+        property_input={"district": "Chilonzor", "total_area": "60", "rooms": 2},
+        amount_uzs=Decimal("50000"),
+        package_type="basic",
+    )
+    await db_session.commit()
+
+    await fsm_context.set_data({"order_id": order.order_id, "language": "uz"})
+    await fsm_context.set_state(PropertyValuationStates.waiting_receipt)
+
+    status_msg = AsyncMock(spec=Message)
+    status_msg.edit_text = AsyncMock()
+
+    bot_mock = AsyncMock()
+    bot_mock.get_file = AsyncMock(return_value=MagicMock(file_path="mock/receipt.pdf"))
+    bot_mock.download_file = AsyncMock(return_value=b"fake-pdf-bytes")
+
+    doc = Document(
+        file_id="pdf_receipt_123",
+        file_unique_id="uniq_pdf_123",
+        file_name="check.pdf",
+        mime_type="application/pdf",
+        file_size=1024,
+    )
+    msg = AsyncMock(spec=Message)
+    msg.photo = None
+    msg.document = doc
+    msg.from_user = TgUser(id=sample_user.telegram_id, is_bot=False, first_name="Test")
+    msg.bot = bot_mock
+    msg.answer = AsyncMock(return_value=status_msg)
+
+    mock_receipt_svc = MagicMock(spec=ReceiptVerificationService)
+    mock_receipt_svc.verify_receipt = AsyncMock(
+        return_value=ReceiptVerificationResult(
+            verdict="likely_match",
+            is_receipt=True,
+            is_successful=True,
+            amount_uzs=Decimal("50000"),
+            payment_system="click",
+            notes="PDF orqali to'langan",
+        )
+    )
+
+    await handle_valuation_receipt_upload(
+        msg,
+        fsm_context,
+        db_session,
+        receipt_service=mock_receipt_svc,
+    )
+
+    refreshed_order = await order_repo.get_by_order_id(db_session, order.order_id)
+    assert refreshed_order is not None
+    assert refreshed_order.payment_status == "pending_verification"
+    assert refreshed_order.receipt_file_id == "pdf_receipt_123"
 
 
 @pytest.mark.asyncio

@@ -797,15 +797,15 @@ async def handle_valuation_package_selection(
             await callback.message.answer(prompt_text, reply_markup=markup)
 
 
-@valuation_router.message(PropertyValuationStates.waiting_receipt, F.photo)
+@valuation_router.message(PropertyValuationStates.waiting_receipt, F.photo | F.document)
 async def handle_valuation_receipt_upload(
     message: Message,
     state: FSMContext,
     session: AsyncSession,
     receipt_service: ReceiptVerificationService | None = None,
 ) -> None:
-    """Analyze receipt photo via AI and register pending_verification state for admin approval."""
-    if not message.photo or not message.from_user:
+    """Analyze receipt photo or document via AI and register pending_verification state."""
+    if (not message.photo and not message.document) or not message.from_user:
         return
 
     data = await state.get_data()
@@ -820,12 +820,36 @@ async def handle_valuation_receipt_upload(
         await state.clear()
         return
 
-    photo = message.photo[-1]
+    # Extract file_id and mime_type from photo or document
+    if message.photo:
+        file_id = message.photo[-1].file_id
+        mime_type = "image/jpeg"
+    elif message.document:
+        doc = message.document
+        mime_type = doc.mime_type or "application/octet-stream"
+        if not (mime_type.startswith("image/") or mime_type == "application/pdf"):
+            invalid_type_text = (
+                "⚠️ <b>Noto‘g‘ri fayl formati!</b>\n\n"
+                "Iltimos, to‘lov chekini rasm (JPG, PNG) yoki PDF formatida yuboring."
+                if lang == "uz"
+                else
+                "⚠️ <b>Неверный формат файла!</b>\n\n"
+                "Пожалуйста, отправьте чек в виде изображения (JPG, PNG) или PDF-файла."
+            )
+            await message.answer(
+                invalid_type_text,
+                reply_markup=get_valuation_receipt_keyboard(order_id, lang=lang),
+            )
+            return
+        file_id = doc.file_id
+    else:
+        return
+
     order_repo = ValuationOrderRepository()
 
     # 1. Anti-fraud: Check duplicate receipt across all existing orders
     is_duplicate = await order_repo.is_receipt_duplicate(
-        session, photo.file_id, exclude_order_id=order_id
+        session, file_id, exclude_order_id=order_id
     )
     if is_duplicate:
         dup_text = (
@@ -850,10 +874,10 @@ async def handle_valuation_receipt_upload(
     )
     status_msg = await message.answer(wait_msg_text)
 
-    # 2. Download receipt image
+    # 2. Download receipt image / document
     file_bytes: bytes = b""
     try:
-        file_info = await message.bot.get_file(photo.file_id)
+        file_info = await message.bot.get_file(file_id)
         if file_info.file_path:
             file_stream = await message.bot.download_file(file_info.file_path)
             file_bytes = (
@@ -878,6 +902,7 @@ async def handle_valuation_receipt_upload(
     # 3. Vision AI Analysis with comparison to expected order amount & card
     verify_res = await receipt_service.verify_receipt(
         file_bytes,
+        mime_type=mime_type,
         expected_amount_uzs=order.amount_uzs,
         expected_card_number=card_setting.card_number,
     )
@@ -886,7 +911,7 @@ async def handle_valuation_receipt_upload(
     await order_repo.mark_pending_verification(
         session,
         order_id,
-        receipt_file_id=photo.file_id,
+        receipt_file_id=file_id,
         receipt_analysis=verify_res.model_dump(mode="json"),
     )
     await session.commit()

@@ -253,6 +253,20 @@ async def reject_valuation_order(
             detail=f"Valuation order '{order_id}' not found.",
         )
 
+    if order.payment_status == "rejected":
+        return {
+            "status": "already_rejected",
+            "order_id": order.order_id,
+            "payment_status": order.payment_status,
+            "admin_notes": order.admin_notes,
+        }
+
+    if order.payment_status == "paid":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="To'lov tasdiqlangan buyurtmani rad etib bo'lmaydi.",
+        )
+
     await repo.mark_rejected(
         session,
         order_id,
