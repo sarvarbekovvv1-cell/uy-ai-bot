@@ -191,9 +191,11 @@ async def test_valuation_unconfigured_payment_shows_safe_notice(
     texts = extract_bot_texts(mock_bot)
     full_output = " ".join(texts)
 
-    # Must contain safe explanation that service is paid and setup is in progress
-    assert "rasmiy to‘lov tizimiga ulanmoqda" in full_output
-    assert "Click va Payme" in full_output
+    # Must contain safe explanation that payment system is not yet configured
+    assert (
+        "To‘lov qabul qilish tizimi sozlanmagan" in full_output
+        or "sozlanish jarayonida" in full_output
+    )
     # Free calculation output must NOT be present
     assert "Taxminiy bozor bahosi:" not in full_output
 

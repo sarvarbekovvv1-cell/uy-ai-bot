@@ -374,6 +374,7 @@ export interface KaizenRecommendationItem {
 export interface PaymentCardSettingItem {
   card_number: string;
   card_holder: string;
+  basic_price_uzs: number;
   standard_price_uzs: number;
   premium_price_uzs: number;
   is_active: boolean;
@@ -383,8 +384,37 @@ export interface PaymentCardSettingItem {
 export interface PaymentCardSettingUpdateInput {
   card_number?: string;
   card_holder?: string;
+  basic_price_uzs?: number;
   standard_price_uzs?: number;
   premium_price_uzs?: number;
   is_active?: boolean;
+}
+
+export interface ValuationOrderItem {
+  id: number;
+  order_id: string;
+  user_id: number;
+  telegram_id: number;
+  amount_uzs: number;
+  currency: string;
+  package_type: string;
+  payment_provider: string | null;
+  provider_trans_id: string | null;
+  payment_status: "pending" | "pending_verification" | "paid" | "rejected" | "failed" | "cancelled";
+  valuation_status: "pending" | "processing" | "completed" | "failed";
+  receipt_file_id: string | null;
+  receipt_analysis: {
+    verdict?: "likely_match" | "mismatch" | "uncertain";
+    amount_uzs?: number;
+    transaction_id?: string | null;
+    recipient_card?: string | null;
+    payment_system?: string;
+    notes?: string;
+  } | null;
+  admin_notes: string | null;
+  approved_by_user_id: number | null;
+  reviewed_at: string | null;
+  paid_at: string | null;
+  created_at: string;
 }
 

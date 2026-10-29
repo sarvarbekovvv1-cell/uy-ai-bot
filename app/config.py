@@ -97,6 +97,11 @@ class Settings(BaseSettings):
 
     # Payment & Monetization Configuration
     valuation_price_uzs: int = Field(default=0, alias="VALUATION_PRICE_UZS")
+    valuation_card_number: str = Field(default="", alias="VALUATION_CARD_NUMBER")
+    valuation_cardholder: str = Field(default="", alias="VALUATION_CARDHOLDER")
+    valuation_price_basic_uzs: int = Field(default=50000, alias="VALUATION_PRICE_BASIC_UZS")
+    valuation_price_standard_uzs: int = Field(default=65000, alias="VALUATION_PRICE_STANDARD_UZS")
+    valuation_price_premium_uzs: int = Field(default=90000, alias="VALUATION_PRICE_PREMIUM_UZS")
     click_service_id: str = Field(default="", alias="CLICK_SERVICE_ID")
     click_merchant_id: str = Field(default="", alias="CLICK_MERCHANT_ID")
     click_secret_key: str = Field(default="", alias="CLICK_SECRET_KEY")

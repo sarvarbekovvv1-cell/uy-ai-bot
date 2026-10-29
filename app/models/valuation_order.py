@@ -21,7 +21,14 @@ from sqlalchemy.types import JSON
 
 from app.database.base import Base
 
-VALUATION_PAYMENT_STATUSES = ("pending", "paid", "failed", "cancelled")
+VALUATION_PAYMENT_STATUSES = (
+    "pending",
+    "pending_verification",
+    "paid",
+    "rejected",
+    "failed",
+    "cancelled",
+)
 VALUATION_STATUSES = ("pending", "processing", "completed", "failed")
 PAYMENT_PROVIDERS = ("click", "payme", "card_transfer")
 
@@ -74,6 +81,15 @@ class ValuationOrder(Base):
         JSON().with_variant(JSONB, "postgresql"), nullable=True
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Admin verification and review
+    admin_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    approved_by_user_id: Mapped[int | None] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

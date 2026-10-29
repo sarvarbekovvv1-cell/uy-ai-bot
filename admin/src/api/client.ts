@@ -21,6 +21,7 @@ import type {
   PropertyListItem,
   StaffUser,
   UserItem,
+  ValuationOrderItem,
   ViewingItem,
 } from "../types";
 
@@ -588,5 +589,52 @@ export const adminApi = {
       method: "PUT",
       body: JSON.stringify(data),
     });
+  },
+
+  // --- Valuation Orders & Receipt Verification ---
+  async listValuationOrders(params: {
+    page?: number;
+    page_size?: number;
+    payment_status?: string;
+    valuation_status?: string;
+  } = {}): Promise<PaginatedResponse<ValuationOrderItem>> {
+    const q = new URLSearchParams();
+    if (params.page) q.set("page", String(params.page));
+    if (params.page_size) q.set("page_size", String(params.page_size));
+    if (params.payment_status) q.set("payment_status", params.payment_status);
+    if (params.valuation_status) q.set("valuation_status", params.valuation_status);
+    return request<PaginatedResponse<ValuationOrderItem>>(
+      `/api/admin/v1/valuation-orders?${q.toString()}`
+    );
+  },
+
+  async getValuationOrder(orderId: string): Promise<ValuationOrderItem> {
+    return request<ValuationOrderItem>(`/api/admin/v1/valuation-orders/${orderId}`);
+  },
+
+  async approveValuationOrder(
+    orderId: string,
+    notes?: string
+  ): Promise<{ status: string; order_id: string; payment_status: string }> {
+    return request<{ status: string; order_id: string; payment_status: string }>(
+      `/api/admin/v1/valuation-orders/${orderId}/approve`,
+      {
+        method: "POST",
+        body: JSON.stringify({ notes }),
+      }
+    );
+  },
+
+  async rejectValuationOrder(
+    orderId: string,
+    reason: string
+  ): Promise<{ status: string; order_id: string; payment_status: string }> {
+    return request<{ status: string; order_id: string; payment_status: string }>(
+      `/api/admin/v1/valuation-orders/${orderId}/reject`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }
+    );
   },
 };

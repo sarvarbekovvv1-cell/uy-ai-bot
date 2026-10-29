@@ -118,6 +118,91 @@ class ValuationOrderRepository:
 
         return order
 
+    async def is_receipt_duplicate(
+        self,
+        session: AsyncSession,
+        receipt_file_id: str,
+        *,
+        exclude_order_id: str | None = None,
+    ) -> bool:
+        """Check if this receipt file_id was already uploaded for a verified or pending order."""
+        if not receipt_file_id:
+            return False
+
+        stmt = select(ValuationOrder.id).where(
+            ValuationOrder.receipt_file_id == receipt_file_id,
+            ValuationOrder.payment_status.in_(["pending_verification", "paid"]),
+        )
+        if exclude_order_id:
+            stmt = stmt.where(ValuationOrder.order_id != exclude_order_id)
+
+        res = await session.execute(stmt)
+        return res.scalar_one_or_none() is not None
+
+    async def mark_pending_verification(
+        self,
+        session: AsyncSession,
+        order_id: str,
+        *,
+        receipt_file_id: str,
+        receipt_analysis: dict[str, Any],
+    ) -> ValuationOrder | None:
+        """Mark order as pending admin verification after receipt upload & AI analysis."""
+        order = await self.get_by_order_id(session, order_id)
+        if not order:
+            return None
+
+        order.payment_status = "pending_verification"
+        order.payment_provider = "card_transfer"
+        order.receipt_file_id = receipt_file_id
+        order.receipt_analysis = receipt_analysis
+        order.valuation_status = "pending"
+        await session.flush()
+        return order
+
+    async def mark_approved(
+        self,
+        session: AsyncSession,
+        order_id: str,
+        *,
+        admin_user_id: int,
+        admin_notes: str | None = None,
+    ) -> ValuationOrder | None:
+        """Transition order to paid state upon manual administrator verification."""
+        order = await self.get_by_order_id(session, order_id)
+        if not order:
+            return None
+
+        order.payment_status = "paid"
+        order.approved_by_user_id = admin_user_id
+        order.admin_notes = admin_notes
+        order.reviewed_at = datetime.now(UTC)
+        order.paid_at = datetime.now(UTC)
+        order.valuation_status = "processing"
+        await session.flush()
+        return order
+
+    async def mark_rejected(
+        self,
+        session: AsyncSession,
+        order_id: str,
+        *,
+        admin_user_id: int,
+        admin_notes: str | None = None,
+    ) -> ValuationOrder | None:
+        """Reject receipt and mark order as rejected."""
+        order = await self.get_by_order_id(session, order_id)
+        if not order:
+            return None
+
+        order.payment_status = "rejected"
+        order.approved_by_user_id = admin_user_id
+        order.admin_notes = admin_notes
+        order.reviewed_at = datetime.now(UTC)
+        order.valuation_status = "failed"
+        await session.flush()
+        return order
+
     async def mark_paid_with_receipt(
         self,
         session: AsyncSession,

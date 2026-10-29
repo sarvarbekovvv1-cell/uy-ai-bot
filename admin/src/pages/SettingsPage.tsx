@@ -21,8 +21,9 @@ export const SettingsPage: React.FC = () => {
   // Payment Card & Pricing state
   const [cardNumber, setCardNumber] = useState("");
   const [cardHolder, setCardHolder] = useState("");
-  const [standardPrice, setStandardPrice] = useState(15000);
-  const [premiumPrice, setPremiumPrice] = useState(30000);
+  const [basicPrice, setBasicPrice] = useState(50000);
+  const [standardPrice, setStandardPrice] = useState(65000);
+  const [premiumPrice, setPremiumPrice] = useState(90000);
   const [isPaymentActive, setIsPaymentActive] = useState(true);
   const [paymentSettingsLoading, setPaymentSettingsLoading] = useState(false);
   const [paymentSettingsSuccess, setPaymentSettingsSuccess] = useState<string | null>(null);
@@ -32,10 +33,11 @@ export const SettingsPage: React.FC = () => {
     adminApi
       .getPaymentSettings()
       .then((data) => {
-        setCardNumber(data.card_number);
-        setCardHolder(data.card_holder);
-        setStandardPrice(data.standard_price_uzs);
-        setPremiumPrice(data.premium_price_uzs);
+        setCardNumber(data.card_number || "");
+        setCardHolder(data.card_holder || "");
+        setBasicPrice(data.basic_price_uzs || 50000);
+        setStandardPrice(data.standard_price_uzs || 65000);
+        setPremiumPrice(data.premium_price_uzs || 90000);
         setIsPaymentActive(data.is_active);
       })
       .catch((err) => {
@@ -58,12 +60,13 @@ export const SettingsPage: React.FC = () => {
     try {
       const updated = await adminApi.updatePaymentSettings({
         card_number: trimmedCard,
-        card_holder: cardHolder.trim() || "Sarvar Bekov",
+        card_holder: cardHolder.trim() || "",
+        basic_price_uzs: Number(basicPrice),
         standard_price_uzs: Number(standardPrice),
         premium_price_uzs: Number(premiumPrice),
         is_active: isPaymentActive,
       });
-      setPaymentSettingsSuccess("To'lov kartasi va tarif narxlari muvaffaqiyatli saqlandi!");
+      setPaymentSettingsSuccess("To'lov kartasi va 3 ta tarif narxi muvaffaqiyatli saqlandi!");
       setCardNumber(updated.card_number);
       setCardHolder(updated.card_holder);
     } catch (err: unknown) {
@@ -575,7 +578,40 @@ export const SettingsPage: React.FC = () => {
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
+              <div>
+                <label
+                  htmlFor="bsc-price-input"
+                  style={{
+                    display: "block",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    color: "#cbd5e1",
+                    marginBottom: "6px",
+                  }}
+                >
+                  🥉 Basic (Bazaviy) — ~$4 (so'm):
+                </label>
+                <input
+                  id="bsc-price-input"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={basicPrice}
+                  onChange={(e) => setBasicPrice(Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    backgroundColor: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: "8px",
+                    color: "#f8fafc",
+                    fontSize: "0.95rem",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
               <div>
                 <label
                   htmlFor="std-price-input"
@@ -587,7 +623,7 @@ export const SettingsPage: React.FC = () => {
                     marginBottom: "6px",
                   }}
                 >
-                  ⚡ Standart baholash narxi (so'm):
+                  🥈 Standart — ~$5 (so'm):
                 </label>
                 <input
                   id="std-price-input"
@@ -620,7 +656,7 @@ export const SettingsPage: React.FC = () => {
                     marginBottom: "6px",
                   }}
                 >
-                  🚀 Ekspert hisobot narxi (so'm):
+                  🥇 Ekspert / Premium — ~$7 (so'm):
                 </label>
                 <input
                   id="prem-price-input"

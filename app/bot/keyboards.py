@@ -1409,25 +1409,30 @@ def get_valuation_payment_keyboard(
 
 
 def get_valuation_package_keyboard(
-    standard_price: int,
-    premium_price: int,
+    basic_price: int = 50000,
+    standard_price: int = 65000,
+    premium_price: int = 90000,
     lang: str = "uz",
 ) -> InlineKeyboardMarkup:
-    """Build keyboard for choosing valuation service package."""
+    """Build keyboard for choosing valuation service package (3 tiers)."""
+    bsc_fmt = f"{basic_price:,}".replace(",", " ")
     std_fmt = f"{standard_price:,}".replace(",", " ")
     prem_fmt = f"{premium_price:,}".replace(",", " ")
 
     if lang == "ru":
-        std_text = f"⚡ Стандарт — {std_fmt} сум"
-        prem_text = f"🚀 Эксперт — {prem_fmt} сум"
+        bsc_text = f"🥉 Базовый — {bsc_fmt} сум (~$4)"
+        std_text = f"🥈 Стандарт — {std_fmt} сум (~$5)"
+        prem_text = f"🥇 Премиум — {prem_fmt} сум (~$7)"
         cancel_text = "❌ Отмена"
     else:
-        std_text = f"⚡ Standart — {std_fmt} so‘m"
-        prem_text = f"🚀 Ekspert — {prem_fmt} so‘m"
+        bsc_text = f"🥉 Basic (Bazaviy) — {bsc_fmt} so‘m (~$4)"
+        std_text = f"🥈 Standard (Standart) — {std_fmt} so‘m (~$5)"
+        prem_text = f"🥇 Premium (Ekspert) — {prem_fmt} so‘m (~$7)"
         cancel_text = "❌ Bekor qilish"
 
     return InlineKeyboardMarkup(
         inline_keyboard=[
+            [InlineKeyboardButton(text=bsc_text, callback_data="val_pkg:basic")],
             [InlineKeyboardButton(text=std_text, callback_data="val_pkg:standard")],
             [InlineKeyboardButton(text=prem_text, callback_data="val_pkg:premium")],
             [InlineKeyboardButton(text=cancel_text, callback_data="val_cancel")],

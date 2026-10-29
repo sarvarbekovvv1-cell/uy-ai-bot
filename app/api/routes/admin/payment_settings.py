@@ -22,6 +22,7 @@ class PaymentCardSettingRead(BaseModel):
 
     card_number: str
     card_holder: str
+    basic_price_uzs: Decimal
     standard_price_uzs: Decimal
     premium_price_uzs: Decimal
     is_active: bool
@@ -36,6 +37,7 @@ class PaymentCardSettingUpdate(BaseModel):
 
     card_number: str | None = Field(default=None, max_length=32)
     card_holder: str | None = Field(default=None, max_length=128)
+    basic_price_uzs: Decimal | None = Field(default=None, ge=0)
     standard_price_uzs: Decimal | None = Field(default=None, ge=0)
     premium_price_uzs: Decimal | None = Field(default=None, ge=0)
     is_active: bool | None = None
@@ -52,6 +54,7 @@ async def get_payment_settings(
     return PaymentCardSettingRead(
         card_number=setting.card_number,
         card_holder=setting.card_holder,
+        basic_price_uzs=setting.basic_price_uzs,
         standard_price_uzs=setting.standard_price_uzs,
         premium_price_uzs=setting.premium_price_uzs,
         is_active=setting.is_active,
@@ -77,6 +80,7 @@ async def update_payment_settings(
         session,
         card_number=payload.card_number,
         card_holder=payload.card_holder,
+        basic_price_uzs=payload.basic_price_uzs,
         standard_price_uzs=payload.standard_price_uzs,
         premium_price_uzs=payload.premium_price_uzs,
         is_active=payload.is_active,
@@ -85,6 +89,7 @@ async def update_payment_settings(
     return PaymentCardSettingRead(
         card_number=setting.card_number,
         card_holder=setting.card_holder,
+        basic_price_uzs=setting.basic_price_uzs,
         standard_price_uzs=setting.standard_price_uzs,
         premium_price_uzs=setting.premium_price_uzs,
         is_active=setting.is_active,
