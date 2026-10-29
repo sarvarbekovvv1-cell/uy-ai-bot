@@ -161,9 +161,9 @@ async def test_valuation_unconfigured_payment_shows_safe_notice(
     await card_repo.update_setting(db_session, is_active=False)
     await db_session.commit()
 
-    # Walk through input wizard
+    # Walk through input wizard for paid AI valuation
     await dp.feed_update(
-        mock_bot, make_msg_update(cust_tg_id, "📊 Uyimni baholash", 1), session=db_session
+        mock_bot, make_msg_update(cust_tg_id, "📊 Uyimni AI orqali baholash", 1), session=db_session
     )
     await dp.feed_update(
         mock_bot, make_cb_update(cust_tg_id, "val_lt:sale", 2), session=db_session

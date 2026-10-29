@@ -1314,6 +1314,7 @@ def get_valuation_actions_keyboard(
             "search": "🔎 O‘xshash e'lonlarni qidirish",
             "submit_sale": "💰 Uyimni sotishga qo‘yish",
             "submit_rent": "🏡 Uyimni ijaraga berish",
+            "upgrade_ai": "🚀 Kengaytirilgan AI tahlil",
             "broker": "👨‍💼 Broker bilan bog‘lanish",
             "menu": "⬅️ Asosiy menyu",
         },
@@ -1322,6 +1323,7 @@ def get_valuation_actions_keyboard(
             "search": "🔎 Найти похожие объявления",
             "submit_sale": "💰 Выставить на продажу",
             "submit_rent": "🏡 Сдать в аренду",
+            "upgrade_ai": "🚀 Расширенный AI анализ",
             "broker": "👨‍💼 Связаться с брокером",
             "menu": "⬅️ Главное меню",
         },
@@ -1330,6 +1332,7 @@ def get_valuation_actions_keyboard(
             "search": "🔎 Search similar listings",
             "submit_sale": "💰 List for sale",
             "submit_rent": "🏡 List for rent",
+            "upgrade_ai": "🚀 Advanced AI Analysis",
             "broker": "👨‍💼 Contact broker",
             "menu": "⬅️ Main menu",
         },
@@ -1343,6 +1346,7 @@ def get_valuation_actions_keyboard(
 
     submit_text = loc["submit_sale"] if listing_type == "sale" else loc["submit_rent"]
     rows.append([InlineKeyboardButton(text=submit_text, callback_data="val_act:submit")])
+    rows.append([InlineKeyboardButton(text=loc["upgrade_ai"], callback_data="val_act:upgrade_ai")])
     rows.append([InlineKeyboardButton(text=loc["broker"], callback_data="val_act:broker")])
     rows.append([InlineKeyboardButton(text=loc["menu"], callback_data="val_act:menu")])
 

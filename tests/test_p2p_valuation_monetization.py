@@ -143,7 +143,7 @@ async def test_bot_currency_step_unconfigured_card_shows_safe_message(
     await repo.update_setting(db_session, card_number="", card_holder="", is_active=False)
     await db_session.commit()
 
-    await fsm_context.set_data({"language": "uz"})
+    await fsm_context.set_data({"language": "uz", "is_paid_flow": True})
     await fsm_context.set_state(PropertyValuationStates.waiting_currency)
 
     callback_msg = AsyncMock(spec=Message)
@@ -195,6 +195,7 @@ async def test_bot_currency_step_configured_card_shows_3_tiers(
             "floor": 4,
             "total_floors": 9,
             "language": "uz",
+            "is_paid_flow": True,
         }
     )
     await fsm_context.set_state(PropertyValuationStates.waiting_currency)

@@ -38,15 +38,25 @@ logger = get_logger(__name__)
 
 valuation_router = Router(name="valuation")
 
+PAID_AI_VALUATION_BUTTONS = {
+    "📊 Uyimni AI orqali baholash",
+    "📊 AI orqali uy baholash",
+    "📊 Оценка через AI",
+    "📊 AI оценка недвижимости",
+    "/ai_valuation",
+}
+
 VALUATION_BUTTONS = {
     locale_dict.get("btn_valuation")
     for locale_dict in LOCALES.values()
     if locale_dict.get("btn_valuation")
 } | {
     "📊 Uyimni baholash",
-    "📊 Uyimni AI orqali baholash",
     "📊 Оценка недвижимости",
-}
+    "📊 Estimate property value",
+    "/valuation",
+    "/baholash",
+} | PAID_AI_VALUATION_BUTTONS
 
 DISTRICT_NORMALIZE = {
     "chilonzor": "Chilonzor",
@@ -99,7 +109,7 @@ def get_valuation_service() -> ValuationService:
     return ValuationService(llm_provider=llm_provider)
 
 
-@valuation_router.message(F.text.in_(VALUATION_BUTTONS) | F.text.in_({"/valuation", "/baholash"}))
+@valuation_router.message(F.text.in_(VALUATION_BUTTONS))
 async def handle_start_valuation(
     message: Message,
     state: FSMContext,
@@ -116,8 +126,16 @@ async def handle_start_valuation(
         return
 
     lang = user.language
+    raw_text = (message.text or "").strip()
+    is_paid_flow = raw_text in PAID_AI_VALUATION_BUTTONS
+
     await state.clear()
-    await state.update_data(user_id=user.id, language=lang, region="Toshkent shahri")
+    await state.update_data(
+        user_id=user.id,
+        language=lang,
+        region="Toshkent shahri",
+        is_paid_flow=is_paid_flow,
+    )
     await state.set_state(PropertyValuationStates.waiting_listing_type)
 
     await message.answer(
@@ -516,6 +534,7 @@ async def handle_valuation_currency(
     currency = callback.data.split(":", 1)[1]
     data = await state.get_data()
     lang = data.get("language", "uz")
+    is_paid_flow = data.get("is_paid_flow", False)
 
     await state.update_data(currency=currency)
 
@@ -532,94 +551,92 @@ async def handle_valuation_currency(
         total_floors=data.get("total_floors"),
         currency=currency,  # type: ignore[arg-type]
     )
+    await state.update_data(val_input=val_input.model_dump(mode="json"))
 
-    # In production, check P2P Card settings first!
-    if valuation_service is None and val_pay_svc is None:
-        card_repo = PaymentCardSettingRepository()
-        card_setting = await card_repo.get_setting(session)
+    # 1. Paid AI Valuation Flow (or explicit val_pay_svc Click/Payme injection)
+    if is_paid_flow or val_pay_svc is not None:
+        if val_pay_svc is None:
+            card_repo = PaymentCardSettingRepository()
+            card_setting = await card_repo.get_setting(session)
 
-        if card_setting.is_configured():
-            await state.update_data(val_input=val_input.model_dump(mode="json"))
-            await state.set_state(PropertyValuationStates.waiting_package)
+            if card_setting.is_configured():
+                await state.set_state(PropertyValuationStates.waiting_package)
 
-            bsc_price_fmt = f"{int(card_setting.basic_price_uzs):,}".replace(",", " ")
-            std_price_fmt = f"{int(card_setting.standard_price_uzs):,}".replace(",", " ")
-            prem_price_fmt = f"{int(card_setting.premium_price_uzs):,}".replace(",", " ")
-            summary_text = format_valuation_input_summary(val_input, lang)
+                bsc_price_fmt = f"{int(card_setting.basic_price_uzs):,}".replace(",", " ")
+                std_price_fmt = f"{int(card_setting.standard_price_uzs):,}".replace(",", " ")
+                prem_price_fmt = f"{int(card_setting.premium_price_uzs):,}".replace(",", " ")
+                summary_text = format_valuation_input_summary(val_input, lang)
 
-            if lang == "ru":
-                pkg_text = (
-                    f"{summary_text}\n"
-                    "📊 <b>Выберите уровень услуги оценки:</b>\n\n"
-                    f"1️⃣ 🥉 <b>Базовый — {bsc_price_fmt} сум (~$4)</b>\n"
-                    "• Расчет ориентировочной рыночной стоимости\n"
-                    "• Средняя цена за 1 м² в районе\n"
-                    "• Краткое заключение AI\n\n"
-                    f"2️⃣ 🥈 <b>Стандарт — {std_price_fmt} сум (~$5)</b>\n"
-                    "• Диапазон рыночной цены (мин/макс) и центральная оценка\n"
-                    "• Анализ сравнительных объектов (аналоги на рынке)\n"
-                    "• Оценка ликвидности и факторов состояния/локации\n\n"
-                    f"3️⃣ 🥇 <b>Премиум — {prem_price_fmt} сум (~$7)</b>\n"
-                    "• Все функции тарифа «Стандарт»\n"
-                    "• 📈 Доходность от аренды (Gross Yield & ROI)\n"
-                    "• 🔮 Прогноз динамики цен на 1–2 года\n"
-                    "• 💡 Экспертная стратегия продажи объекта"
+                if lang == "ru":
+                    pkg_text = (
+                        f"{summary_text}\n"
+                        "📊 <b>Выберите уровень услуги оценки:</b>\n\n"
+                        f"1️⃣ 🥉 <b>Базовый — {bsc_price_fmt} сум (~$4)</b>\n"
+                        "• Расчет ориентировочной рыночной стоимости\n"
+                        "• Средняя цена за 1 м² в районе\n"
+                        "• Краткое заключение AI\n\n"
+                        f"2️⃣ 🥈 <b>Стандарт — {std_price_fmt} сум (~$5)</b>\n"
+                        "• Диапазон рыночной цены (мин/макс) и центральная оценка\n"
+                        "• Анализ сравнительных объектов (аналоги на рынке)\n"
+                        "• Оценка ликвидности и факторов состояния/локации\n\n"
+                        f"3️⃣ 🥇 <b>Премиум — {prem_price_fmt} сум (~$7)</b>\n"
+                        "• Все функции тарифа «Стандарт»\n"
+                        "• 📈 Доходность от аренды (Gross Yield & ROI)\n"
+                        "• 🔮 Прогноз динамики цен на 1–2 года\n"
+                        "• 💡 Экспертная стратегия продажи объекта"
+                    )
+                else:
+                    pkg_text = (
+                        f"{summary_text}\n"
+                        "📊 <b>Baholash xizmati tarifini tanlang:</b>\n\n"
+                        f"1️⃣ 🥉 <b>Basic (Bazaviy) — {bsc_price_fmt} so‘m (~$4)</b>\n"
+                        "• Uyning taxminiy bozor narxi va 1 m² qiymati\n"
+                        "• Sun'iy intellektdan qisqa xulosa\n\n"
+                        f"2️⃣ 🥈 <b>Standard (Standart) — {std_price_fmt} so‘m (~$5)</b>\n"
+                        "• Bozor narxi oralig‘i (min/max) va markaziy baho\n"
+                        "• O‘xshash e'lonlar bilan taqqoslama tahlil\n"
+                        "• Ta'mir va joylashuv omillari bo‘yicha AI izohi\n\n"
+                        f"3️⃣ 🥇 <b>Premium (Ekspert) — {prem_price_fmt} so‘m (~$7)</b>\n"
+                        "• Standart tarifdagi barcha imkoniyatlar\n"
+                        "• 📈 Ijara rentabelligi va yillik daromadlilik (ROI)\n"
+                        "• 🔮 Kelgusi 1–2 yillik narx dinamikasi prognozi\n"
+                        "• 💡 Ekspert sotish strategiyasi va tavsiyalar"
+                    )
+
+                markup = get_valuation_package_keyboard(
+                    int(card_setting.basic_price_uzs),
+                    int(card_setting.standard_price_uzs),
+                    int(card_setting.premium_price_uzs),
+                    lang=lang,
                 )
-            else:
-                pkg_text = (
-                    f"{summary_text}\n"
-                    "📊 <b>Baholash xizmati tarifini tanlang:</b>\n\n"
-                    f"1️⃣ 🥉 <b>Basic (Bazaviy) — {bsc_price_fmt} so‘m (~$4)</b>\n"
-                    "• Uyning taxminiy bozor narxi va 1 m² qiymati\n"
-                    "• Sun'iy intellektdan qisqa xulosa\n\n"
-                    f"2️⃣ 🥈 <b>Standard (Standart) — {std_price_fmt} so‘m (~$5)</b>\n"
-                    "• Bozor narxi oralig‘i (min/max) va markaziy baho\n"
-                    "• O‘xshash e'lonlar bilan taqqoslama tahlil\n"
-                    "• Ta'mir va joylashuv omillari bo‘yicha AI izohi\n\n"
-                    f"3️⃣ 🥇 <b>Premium (Ekspert) — {prem_price_fmt} so‘m (~$7)</b>\n"
-                    "• Standart tarifdagi barcha imkoniyatlar\n"
-                    "• 📈 Ijara rentabelligi va yillik daromadlilik (ROI)\n"
-                    "• 🔮 Kelgusi 1–2 yillik narx dinamikasi prognozi\n"
-                    "• 💡 Ekspert sotish strategiyasi va tavsiyalar"
-                )
 
-            markup = get_valuation_package_keyboard(
-                int(card_setting.basic_price_uzs),
-                int(card_setting.standard_price_uzs),
-                int(card_setting.premium_price_uzs),
-                lang=lang,
+                if callback.message and isinstance(callback.message, Message):
+                    try:
+                        await callback.message.edit_text(pkg_text, reply_markup=markup)
+                    except TelegramBadRequest:
+                        await callback.message.answer(pkg_text, reply_markup=markup)
+                return
+
+            # If card is not configured, show unconfigured message rather than fake cards
+            notice_text = (
+                "⚠️ <b>To‘lov qabul qilish tizimi sozlanmagan.</b>\n\n"
+                "Hozirda to‘lov rekvizitlari sozlanish jarayonida. "
+                "Tez orada xizmat faollashtiriladi.\n"
+                "Iltimos, keyinroq urinib ko‘ring yoki brokerimiz bilan bog‘laning."
+                if lang == "uz"
+                else
+                "⚠️ <b>Система приема платежей не настроена.</b>\n\n"
+                "В настоящее время платежные реквизиты находятся в процессе настройки.\n"
+                "Пожалуйста, повторите попытку позже или обратитесь к брокеру."
             )
-
+            markup = get_main_menu_keyboard(lang)
+            await state.clear()
             if callback.message and isinstance(callback.message, Message):
-                try:
-                    await callback.message.edit_text(pkg_text, reply_markup=markup)
-                except TelegramBadRequest:
-                    await callback.message.answer(pkg_text, reply_markup=markup)
+                await callback.message.answer(notice_text, reply_markup=markup)
             return
 
-        # If card is not configured, show unconfigured message rather than fake cards
-        notice_text = (
-            "⚠️ <b>To‘lov qabul qilish tizimi sozlanmagan.</b>\n\n"
-            "Hozirda to‘lov rekvizitlari sozlanish jarayonida. Tez orada xizmat faollashtiriladi.\n"
-            "Iltimos, keyinroq urinib ko‘ring yoki brokerimiz bilan bog‘laning."
-            if lang == "uz"
-            else
-            "⚠️ <b>Система приема платежей не настроена.</b>\n\n"
-            "В настоящее время платежные реквизиты находятся в процессе настройки.\n"
-            "Пожалуйста, повторите попытку позже или обратитесь к брокеру."
-        )
-        markup = get_main_menu_keyboard(lang)
-        await state.clear()
-        if callback.message and isinstance(callback.message, Message):
-            await callback.message.answer(notice_text, reply_markup=markup)
-        return
-
-    # If card monetization is inactive or val_pay_svc is passed (Click/Payme):
-    if valuation_service is None:
-        if val_pay_svc is None:
-            val_pay_svc = ValuationPaymentService()
-
-        if val_pay_svc is not None and not val_pay_svc.is_service_ready():
+        # val_pay_svc was passed (Click/Payme tests)
+        if not val_pay_svc.is_service_ready():
             notice_text = get_text("val_payment_service_unconfigured", lang)
             markup = get_main_menu_keyboard(lang)
             await state.clear()
@@ -627,14 +644,12 @@ async def handle_valuation_currency(
                 await callback.message.answer(notice_text, reply_markup=markup)
             return
 
-        # User lookup
         user_service = UserService()
         user = await user_service.get_by_telegram_id(session, callback.from_user.id)
         if not user:
             await callback.answer("Foydalanuvchi topilmadi.", show_alert=True)
             return
 
-        # Create ValuationOrder
         order = await val_pay_svc.create_valuation_order(
             session,
             user_id=user.id,
@@ -643,14 +658,12 @@ async def handle_valuation_currency(
         )
         await session.commit()
 
-        # Save order details in FSM state
         await state.update_data(
             order_id=order.order_id,
             val_input=val_input.model_dump(mode="json"),
         )
         await state.set_state(PropertyValuationStates.waiting_payment)
 
-        # Format summary and payment prompt
         summary_text = format_valuation_input_summary(val_input, lang)
         price_fmt = f"{int(order.amount_uzs):,}".replace(",", " ")
         price_notice = get_text("val_price_notice", lang).replace("{price}", price_fmt)
@@ -675,12 +688,26 @@ async def handle_valuation_currency(
                 await callback.message.answer(prompt_text, reply_markup=markup)
         return
 
-    # Direct calculation path (for explicit test mock injection)
-    result: PropertyValuationResult = await valuation_service.valuate_property(
-        session,
-        val_input,
-        language=lang,
-    )
+    # 2. Standard / Free Market Valuation Flow
+    val_svc = valuation_service or get_valuation_service()
+    try:
+        result: PropertyValuationResult = await val_svc.valuate_property(
+            session,
+            val_input,
+            language=lang,
+        )
+    except Exception as e:
+        logger.exception("Valuation calculation failed: %s", e)
+        error_msg = (
+            "⚠️ Baholashni hisoblashda texnik xatolik yuz berdi. Iltimos, qaytadan urinib ko‘ring."
+            if lang == "uz"
+            else "⚠️ Произошла техническая ошибка при расчете оценки. Пожалуйста, повторите попытку."
+        )
+        if callback.message and isinstance(callback.message, Message):
+            await callback.message.answer(error_msg, reply_markup=get_main_menu_keyboard(lang))
+        await state.clear()
+        return
+
     card_text = format_valuation_result_card(val_input, result, lang)
     comps_data = [comp.model_dump() for comp in result.comparable_properties]
     await state.update_data(
@@ -1176,6 +1203,18 @@ def format_valuation_result_card(
     conf_label = conf_map.get(lang, conf_map["uz"]).get(res.confidence, res.confidence)
     cond_label = format_condition(inp.condition, lang)
 
+    floor_label = ""
+    if inp.floor:
+        if inp.total_floors:
+            floor_text = f"{inp.floor}/{inp.total_floors}"
+        else:
+            floor_text = f"{inp.floor}"
+        floor_label = (
+            f"🏢 {floor_text} qavat\n"
+            if lang == "uz"
+            else (f"🏢 {floor_text} этаж\n" if lang == "ru" else f"🏢 Floor {floor_text}\n")
+        )
+
     explanation_text = ""
     if res.explanation and res.explanation.summary:
         explanation_text = f"\n\n🤖 <b>AI tahlil va izoh:</b>\n{res.explanation.summary}"
@@ -1215,6 +1254,7 @@ def format_valuation_result_card(
                 f"📍 <b>{inp.region}, {inp.district}</b>\n"
                 f"🏠 {prop_type_label}\n"
                 f"🚪 {inp.rooms} комн. | 📐 {inp.total_area} м²\n"
+                f"{floor_label}"
                 f"✨ {cond_label}\n\n"
                 f"🎯 <b>Ориентировочная рыночная стоимость:</b>\n"
                 f"<b>{central_str}</b>\n\n"
@@ -1230,6 +1270,7 @@ def format_valuation_result_card(
             f"🏠 {prop_type_label}\n"
             f"🚪 {inp.rooms} комн.\n"
             f"📐 {inp.total_area} м²\n"
+            f"{floor_label}"
             f"✨ {cond_label}\n\n"
             f"💰 <b>Ориентировочная рыночная цена:</b>\n"
             f"<b>{range_str}</b>\n\n"
@@ -1250,6 +1291,7 @@ def format_valuation_result_card(
             f"📍 <b>{inp.region}, {inp.district}</b>\n"
             f"🏠 {prop_type_label}\n"
             f"🚪 {inp.rooms} xona | 📐 {inp.total_area} m²\n"
+            f"{floor_label}"
             f"✨ {cond_label}\n\n"
             f"🎯 <b>Taxminiy bozor bahosi:</b>\n"
             f"<b>{central_str}</b>\n\n"
@@ -1265,6 +1307,7 @@ def format_valuation_result_card(
         f"🏠 {prop_type_label}\n"
         f"🚪 {inp.rooms} xona\n"
         f"📐 {inp.total_area} m²\n"
+        f"{floor_label}"
         f"✨ {cond_label}\n\n"
         f"💰 <b>Taxminiy bozor bahosi:</b>\n"
         f"<b>{range_str}</b>\n\n"
@@ -1410,3 +1453,99 @@ async def handle_valuation_action_menu(
             get_text("main_menu_title", lang),
             reply_markup=get_main_menu_keyboard(lang),
         )
+
+
+@valuation_router.callback_query(
+    PropertyValuationStates.viewing_result, F.data == "val_act:upgrade_ai"
+)
+async def handle_valuation_upgrade_ai(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session: AsyncSession,
+) -> None:
+    """Transition from standard valuation result to paid AI valuation tiers."""
+    await callback.answer()
+    if not callback.from_user or not callback.message:
+        return
+
+    data = await state.get_data()
+    lang = data.get("language", "uz")
+    raw_input = data.get("val_input")
+
+    if not raw_input:
+        await callback.answer("Mulk ma'lumotlari topilmadi.", show_alert=True)
+        return
+
+    val_input = PropertyValuationInput.model_validate(raw_input)
+
+    card_repo = PaymentCardSettingRepository()
+    card_setting = await card_repo.get_setting(session)
+
+    if card_setting.is_configured():
+        await state.set_state(PropertyValuationStates.waiting_package)
+
+        bsc_price_fmt = f"{int(card_setting.basic_price_uzs):,}".replace(",", " ")
+        std_price_fmt = f"{int(card_setting.standard_price_uzs):,}".replace(",", " ")
+        prem_price_fmt = f"{int(card_setting.premium_price_uzs):,}".replace(",", " ")
+        summary_text = format_valuation_input_summary(val_input, lang)
+
+        if lang == "ru":
+            pkg_text = (
+                f"{summary_text}\n"
+                "📊 <b>Выберите уровень услуги расширенной AI оценки:</b>\n\n"
+                f"1️⃣ 🥉 <b>Базовый — {bsc_price_fmt} сум (~$4)</b>\n"
+                "• Расчет ориентировочной рыночной стоимости\n"
+                "• Средняя цена за 1 м² в районе\n"
+                "• Краткое заключение AI\n\n"
+                f"2️⃣ 🥈 <b>Стандарт — {std_price_fmt} сум (~$5)</b>\n"
+                "• Диапазон рыночной цены (мин/макс) и центральная оценка\n"
+                "• Анализ сравнительных объектов (аналоги на рынке)\n"
+                "• Оценка ликвидности и факторов состояния/локации\n\n"
+                f"3️⃣ 🥇 <b>Премиум — {prem_price_fmt} сум (~$7)</b>\n"
+                "• Все функции тарифа «Стандарт»\n"
+                "• 📈 Доходность от аренды (Gross Yield & ROI)\n"
+                "• 🔮 Прогноз динамики цен на 1–2 года\n"
+                "• 💡 Экспертная стратегия продажи объекта"
+            )
+        else:
+            pkg_text = (
+                f"{summary_text}\n"
+                "📊 <b>Kengaytirilgan AI baholash xizmati tarifini tanlang:</b>\n\n"
+                f"1️⃣ 🥉 <b>Basic (Bazaviy) — {bsc_price_fmt} so‘m (~$4)</b>\n"
+                "• Uyning taxminiy bozor narxi va 1 m² qiymati\n"
+                "• Sun'iy intellektdan qisqa xulosa\n\n"
+                f"2️⃣ 🥈 <b>Standard (Standart) — {std_price_fmt} so‘m (~$5)</b>\n"
+                "• Bozor narxi oralig‘i (min/max) va markaziy baho\n"
+                "• O‘xshash e'lonlar bilan taqqoslama tahlil\n"
+                "• Ta'mir va joylashuv omillari bo‘yicha AI izohi\n\n"
+                f"3️⃣ 🥇 <b>Premium (Ekspert) — {prem_price_fmt} so‘m (~$7)</b>\n"
+                "• Standart tarifdagi barcha imkoniyatlar\n"
+                "• 📈 Ijara rentabelligi va yillik daromadlilik (ROI)\n"
+                "• 🔮 Kelgusi 1–2 yillik narx dinamikasi prognozi\n"
+                "• 💡 Ekspert sotish strategiyasi va tavsiyalar"
+            )
+
+        markup = get_valuation_package_keyboard(
+            int(card_setting.basic_price_uzs),
+            int(card_setting.standard_price_uzs),
+            int(card_setting.premium_price_uzs),
+            lang=lang,
+        )
+
+        if isinstance(callback.message, Message):
+            try:
+                await callback.message.edit_text(pkg_text, reply_markup=markup)
+            except TelegramBadRequest:
+                await callback.message.answer(pkg_text, reply_markup=markup)
+        return
+
+    notice_text = (
+        "⚠️ <b>Kengaytirilgan AI tahlil xizmati sozlanmoqda.</b>\n\n"
+        "Hozirda to‘lov rekvizitlari yangilanmoqda. Tez orada ushbu imkoniyat to‘liq ishga tushadi."
+        if lang == "uz"
+        else
+        "⚠️ <b>Система расширенного AI анализа настраивается.</b>\n\n"
+        "В настоящее время платежные реквизиты обновляются. Скоро функция станет доступна."
+    )
+    if isinstance(callback.message, Message):
+        await callback.message.answer(notice_text)

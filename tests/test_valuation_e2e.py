@@ -168,7 +168,62 @@ async def setup_valuation_db(db_session: AsyncSession) -> dict[str, int]:
         status="approved",
     )
 
-    db_session.add_all([comp1, comp2, comp3, comp_rent1, comp_rent2])
+    comp_uzs1 = Property(
+        owner_user_id=customer.id,
+        listing_type="sale",
+        property_type="apartment",
+        title="2-room Chilonzor UZS 1",
+        region="Toshkent shahri",
+        district="Chilonzor",
+        address="Chilonzor-12",
+        rooms=2,
+        total_area=Decimal("55"),
+        condition="renovated",
+        price=Decimal("1200000000"),
+        currency="UZS",
+        status="approved",
+    )
+    comp_uzs2 = Property(
+        owner_user_id=customer.id,
+        listing_type="sale",
+        property_type="apartment",
+        title="2-room Chilonzor UZS 2",
+        region="Toshkent shahri",
+        district="Chilonzor",
+        address="Chilonzor-13",
+        rooms=2,
+        total_area=Decimal("57"),
+        condition="renovated",
+        price=Decimal("1250000000"),
+        currency="UZS",
+        status="approved",
+    )
+    comp_uzs3 = Property(
+        owner_user_id=customer.id,
+        listing_type="sale",
+        property_type="apartment",
+        title="2-room Chilonzor UZS 3",
+        region="Toshkent shahri",
+        district="Chilonzor",
+        address="Chilonzor-14",
+        rooms=2,
+        total_area=Decimal("56"),
+        condition="renovated",
+        price=Decimal("1220000000"),
+        currency="UZS",
+        status="approved",
+    )
+
+    db_session.add_all([
+        comp1,
+        comp2,
+        comp3,
+        comp_rent1,
+        comp_rent2,
+        comp_uzs1,
+        comp_uzs2,
+        comp_uzs3,
+    ])
     await db_session.commit()
 
     return {
@@ -506,3 +561,223 @@ async def test_callback_tampering_is_handled_gracefully(
     )
 
     # No unhandled exceptions; test completes cleanly!
+
+
+@pytest.mark.asyncio
+async def test_valuation_flow_56m2_5_8_floor_usd_and_upgrade(
+    setup_valuation_db: dict[str, int],
+    db_session: AsyncSession,
+) -> None:
+    """Verify entering 56 m² and 5/8 floor in USD completes cleanly without looping."""
+    user_id = setup_valuation_db["customer_uz"]
+    dp = create_dispatcher()
+    mock_bot = AsyncMock(spec=Bot)
+
+    # 1. /start then 📊 Uyimni baholash
+    await dp.feed_update(
+        mock_bot, make_msg_update(user_id, "📊 Uyimni baholash", 1), session=db_session
+    )
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_lt:sale", 2), session=db_session)
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_pt:apartment", 3), session=db_session
+    )
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_dst:Chilonzor", 4), session=db_session
+    )
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_rooms:2", 5), session=db_session)
+    await dp.feed_update(mock_bot, make_msg_update(user_id, "56", 6), session=db_session)
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_cond:renovated", 7), session=db_session
+    )
+    await dp.feed_update(mock_bot, make_msg_update(user_id, "5/8", 8), session=db_session)
+
+    # 2. Select USD currency - should calculate directly WITHOUT getting stuck
+    mock_bot.reset_mock()
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_curr:USD", 9), session=db_session)
+
+    texts = extract_bot_texts(mock_bot)
+    full_output = " ".join(texts)
+
+    assert "AI BOZOR BAHOSI" in full_output
+    assert "Chilonzor" in full_output
+    assert "56 m²" in full_output
+    assert "5/8 qavat" in full_output
+    assert "$" in full_output
+    assert "Taxminiy bozor bahosi:" in full_output
+
+    fsm_ctx = dp.fsm.get_context(bot=mock_bot, chat_id=user_id, user_id=user_id)
+    assert await fsm_ctx.get_state() == PropertyValuationStates.viewing_result
+    data = await fsm_ctx.get_data()
+    assert data["val_input"]["total_area"] == "56"
+    assert data["val_input"]["floor"] == 5
+    assert data["val_input"]["total_floors"] == 8
+    assert data["val_input"]["currency"] == "USD"
+
+    # 3. Test clicking "🚀 Kengaytirilgan AI tahlil" (val_act:upgrade_ai)
+    from app.repositories.payment_card_setting_repository import PaymentCardSettingRepository
+
+    card_repo = PaymentCardSettingRepository()
+    await card_repo.update_setting(
+        db_session,
+        card_number="5614 6819 1232 9251",
+        card_holder="Sarvar Bekov",
+        basic_price_uzs=Decimal("50000"),
+        standard_price_uzs=Decimal("65000"),
+        premium_price_uzs=Decimal("90000"),
+        is_active=True,
+    )
+    await db_session.commit()
+
+    mock_bot.reset_mock()
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_act:upgrade_ai", 10), session=db_session
+    )
+
+    upgrade_texts = extract_bot_texts(mock_bot)
+    upgrade_output = " ".join(upgrade_texts)
+    assert "Kengaytirilgan AI baholash xizmati tarifini tanlang" in upgrade_output
+    assert "50 000 so‘m" in upgrade_output
+    assert await fsm_ctx.get_state() == PropertyValuationStates.waiting_package
+
+
+@pytest.mark.asyncio
+async def test_valuation_flow_56m2_5_8_floor_uzs(
+    setup_valuation_db: dict[str, int],
+    db_session: AsyncSession,
+) -> None:
+    """Verify entering 56 m² and 5/8 floor in UZS completes cleanly and formats in UZS."""
+    user_id = setup_valuation_db["customer_uz"]
+    dp = create_dispatcher()
+    mock_bot = AsyncMock(spec=Bot)
+
+    # 1. /start then 📊 Uyimni baholash
+    await dp.feed_update(
+        mock_bot, make_msg_update(user_id, "📊 Uyimni baholash", 1), session=db_session
+    )
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_lt:sale", 2), session=db_session)
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_pt:apartment", 3), session=db_session
+    )
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_dst:Chilonzor", 4), session=db_session
+    )
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_rooms:2", 5), session=db_session)
+    await dp.feed_update(mock_bot, make_msg_update(user_id, "56", 6), session=db_session)
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_cond:renovated", 7), session=db_session
+    )
+    await dp.feed_update(mock_bot, make_msg_update(user_id, "5/8", 8), session=db_session)
+
+    # 2. Select UZS currency
+    mock_bot.reset_mock()
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_curr:UZS", 9), session=db_session)
+
+    texts = extract_bot_texts(mock_bot)
+    full_output = " ".join(texts)
+
+    assert "AI BOZOR BAHOSI" in full_output
+    assert "Chilonzor" in full_output
+    assert "56 m²" in full_output
+    assert "5/8 qavat" in full_output
+    assert "UZS" in full_output
+    assert "Taxminiy bozor bahosi:" in full_output
+
+    fsm_ctx = dp.fsm.get_context(bot=mock_bot, chat_id=user_id, user_id=user_id)
+    assert await fsm_ctx.get_state() == PropertyValuationStates.viewing_result
+    data = await fsm_ctx.get_data()
+    assert data["val_input"]["currency"] == "UZS"
+    assert data["val_input"]["total_area"] == "56"
+    assert data["val_input"]["floor"] == 5
+    assert data["val_input"]["total_floors"] == 8
+
+
+@pytest.mark.asyncio
+async def test_paid_ai_valuation_direct_button_starts_monetization(
+    setup_valuation_db: dict[str, int],
+    db_session: AsyncSession,
+) -> None:
+    """Verify clicking '📊 Uyimni AI orqali baholash' enters the paid monetization package flow."""
+    from app.repositories.payment_card_setting_repository import PaymentCardSettingRepository
+
+    card_repo = PaymentCardSettingRepository()
+    await card_repo.update_setting(
+        db_session,
+        card_number="5614 6819 1232 9251",
+        card_holder="Sarvar Bekov",
+        basic_price_uzs=Decimal("50000"),
+        standard_price_uzs=Decimal("65000"),
+        premium_price_uzs=Decimal("90000"),
+        is_active=True,
+    )
+    await db_session.commit()
+
+    user_id = setup_valuation_db["customer_uz"]
+    dp = create_dispatcher()
+    mock_bot = AsyncMock(spec=Bot)
+
+    # 1. Start with dedicated paid button
+    await dp.feed_update(
+        mock_bot, make_msg_update(user_id, "📊 Uyimni AI orqali baholash", 1), session=db_session
+    )
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_lt:sale", 2), session=db_session)
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_pt:apartment", 3), session=db_session
+    )
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_dst:Chilonzor", 4), session=db_session
+    )
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_rooms:2", 5), session=db_session)
+    await dp.feed_update(mock_bot, make_msg_update(user_id, "56", 6), session=db_session)
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_cond:renovated", 7), session=db_session
+    )
+    await dp.feed_update(mock_bot, make_msg_update(user_id, "5/8", 8), session=db_session)
+
+    # 2. Currency step -> should advance to waiting_package with 3 tiers
+    mock_bot.reset_mock()
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_curr:USD", 9), session=db_session)
+
+    texts = extract_bot_texts(mock_bot)
+    full_output = " ".join(texts)
+    assert "Baholash xizmati tarifini tanlang" in full_output
+    assert "50 000 so‘m" in full_output
+    assert "65 000 so‘m" in full_output
+    assert "90 000 so‘m" in full_output
+
+    fsm_ctx = dp.fsm.get_context(bot=mock_bot, chat_id=user_id, user_id=user_id)
+    assert await fsm_ctx.get_state() == PropertyValuationStates.waiting_package
+
+
+@pytest.mark.asyncio
+async def test_start_command_resets_valuation_flow(
+    setup_valuation_db: dict[str, int],
+    db_session: AsyncSession,
+) -> None:
+    """Verify sending /start during valuation resets FSM state and opens main menu."""
+    user_id = setup_valuation_db["customer_uz"]
+    dp = create_dispatcher()
+    mock_bot = AsyncMock(spec=Bot)
+
+    # Start valuation and proceed to waiting_rooms
+    await dp.feed_update(
+        mock_bot, make_msg_update(user_id, "📊 Uyimni baholash", 1), session=db_session
+    )
+    await dp.feed_update(mock_bot, make_cb_update(user_id, "val_lt:sale", 2), session=db_session)
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_pt:apartment", 3), session=db_session
+    )
+    await dp.feed_update(
+        mock_bot, make_cb_update(user_id, "val_dst:Chilonzor", 4), session=db_session
+    )
+
+    fsm_ctx = dp.fsm.get_context(bot=mock_bot, chat_id=user_id, user_id=user_id)
+    assert await fsm_ctx.get_state() == PropertyValuationStates.waiting_rooms
+
+    # Send /start
+    mock_bot.reset_mock()
+    await dp.feed_update(mock_bot, make_msg_update(user_id, "/start", 5), session=db_session)
+
+    texts = extract_bot_texts(mock_bot)
+    full_output = " ".join(texts)
+    assert "Hush kelibsiz" in full_output or "Asosiy menyu" in full_output
+    assert await fsm_ctx.get_state() is None
