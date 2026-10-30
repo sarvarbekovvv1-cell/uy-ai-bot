@@ -342,6 +342,12 @@ async def test_each_tier_selection_creates_order_with_exact_price(
         assert "8600 1234 5678 9999" in call_text
         assert "UyAI Real Estate" in call_text
 
+        # Reply markup must contain the Copy Card Number button
+        call_markup = callback_msg.edit_text.call_args[1]["reply_markup"]
+        assert call_markup is not None
+        assert call_markup.inline_keyboard[0][0].text == "📋 Copy card number"
+        assert call_markup.inline_keyboard[0][0].copy_text.text == "8600123456789999"
+
         # FSM state should now wait for receipt
         assert await fsm_context.get_state() == PropertyValuationStates.waiting_receipt
 
@@ -591,4 +597,45 @@ async def test_upgrade_ai_diagnostic_logs_emitted(
     assert "DIAG_UPGRADE_AI: Tariflar muvaffaqiyatli olindimi: HA" in log_records
     assert "DIAG_UPGRADE_AI: Keyboard yaratildimi: HA" in log_records
     assert "DIAG_UPGRADE_AI: Xatolik yuz berdimi: YO‘Q" in log_records
+
+
+@pytest.mark.asyncio
+async def test_package_selection_displays_admin_card_and_copy_button(
+    db_session: AsyncSession,
+    sample_user: User,
+    fsm_context: FSMContext,
+) -> None:
+    """When clicking a tier, card number and holder from admin settings are shown with
+    copy button."""
+    card_repo = PaymentCardSettingRepository()
+    await card_repo.update_setting(
+        db_session,
+        card_number="9860 5555 4444 3333",
+        card_holder="Alisher Navoiy",
+        basic_price_uzs=Decimal("50000"),
+        is_active=True,
+    )
+    await db_session.commit()
+
+    await fsm_context.clear()
+    callback_msg = AsyncMock(spec=Message)
+    callback_msg.edit_text = AsyncMock()
+
+    tg_user = TgUser(id=sample_user.telegram_id, is_bot=False, first_name="Test")
+    callback = MagicMock(spec=CallbackQuery)
+    callback.data = "val_pkg:basic"
+    callback.from_user = tg_user
+    callback.message = callback_msg
+    callback.answer = AsyncMock()
+
+    await handle_valuation_package_selection(callback, fsm_context, db_session)
+
+    call_text = callback_msg.edit_text.call_args[0][0]
+    assert "9860 5555 4444 3333" in call_text
+    assert "Alisher Navoiy" in call_text
+    assert "50 000 so‘m" in call_text
+
+    call_markup = callback_msg.edit_text.call_args[1]["reply_markup"]
+    assert call_markup.inline_keyboard[0][0].text == "📋 Copy card number"
+    assert call_markup.inline_keyboard[0][0].copy_text.text == "9860555544443333"
 

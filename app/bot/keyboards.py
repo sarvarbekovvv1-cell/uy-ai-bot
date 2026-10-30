@@ -1,6 +1,7 @@
 """Telegram bot keyboard builders for menus, registration, settings, and properties."""
 
 from aiogram.types import (
+    CopyTextButton,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,
@@ -1444,18 +1445,38 @@ def get_valuation_package_keyboard(
     )
 
 
-def get_valuation_receipt_keyboard(order_id: str, lang: str = "uz") -> InlineKeyboardMarkup:
-    """Build keyboard shown when waiting for receipt upload."""
-    if lang == "ru":
-        cancel_text = "❌ Отмена"
-    elif lang == "uz":
-        cancel_text = "❌ Bekor qilish"
-    else:
-        cancel_text = "❌ Cancel"
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=cancel_text, callback_data=f"val_cancel_pay:{order_id}")]
+def get_valuation_receipt_keyboard(
+    order_id: str,
+    card_number: str | None = None,
+    lang: str = "uz",
+) -> InlineKeyboardMarkup:
+    """Build keyboard shown when waiting for receipt upload with copy card button."""
+    rows: list[list[InlineKeyboardButton]] = []
+    if card_number:
+        clean_card = card_number.replace(" ", "").strip()
+        copy_label = "📋 Copy card number"
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=copy_label,
+                    copy_text=CopyTextButton(text=clean_card),
+                )
+            ]
+        )
+
+    cancel_text = (
+        "❌ Bekor qilish"
+        if lang == "uz"
+        else ("❌ Отмена" if lang == "ru" else "❌ Cancel")
+    )
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=cancel_text,
+                callback_data=f"val_cancel_pay:{order_id}",
+            )
         ]
     )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

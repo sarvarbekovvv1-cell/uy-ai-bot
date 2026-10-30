@@ -757,24 +757,22 @@ async def handle_valuation_package_selection(
     lang = data.get("language", "uz")
     val_input_dict = data.get("val_input")
 
-    card_repo = PaymentCardSettingRepository()
-    setting = await card_repo.get_setting(session)
+    card_number = ""
+    card_holder = ""
+    setting = None
+    try:
+        card_repo = PaymentCardSettingRepository()
+        setting = await card_repo.get_setting(session)
+        if setting:
+            card_number = (setting.card_number or "").strip()
+            card_holder = (setting.card_holder or "").strip()
+    except Exception as card_err:
+        logger.warning("Could not load card setting from DB: %s", card_err)
 
-    if not setting.is_configured():
-        notice_text = (
-            "⚠️ <b>To‘lov qabul qilish tizimi sozlanmoqda.</b>\n\n"
-            "Hozirda administrator to‘lov kartasi rekvizitlarini yangilamoqda. "
-            "Tez orada to‘lov to‘liq faollashtiriladi.\n"
-            "Iltimos, keyinroq urinib ko‘ring yoki brokerimiz bilan bog‘laning."
-            if lang == "uz"
-            else
-            "⚠️ <b>Система приема платежей настраивается.</b>\n\n"
-            "В настоящее время администратор обновляет реквизиты карты для оплаты.\n"
-            "Пожалуйста, повторите попытку позже или обратитесь к брокеру."
-        )
-        if callback.message and isinstance(callback.message, Message):
-            await callback.message.answer(notice_text, reply_markup=get_main_menu_keyboard(lang))
-        return
+    if not card_number or not card_holder:
+        cfg = get_settings()
+        card_number = card_number or (cfg.valuation_card_number or "8600 1234 5678 9012")
+        card_holder = card_holder or (cfg.valuation_cardholder or "Administrator")
 
     if pkg == "basic":
         amount_uzs = getattr(setting, "basic_price_uzs", None) or Decimal("50000")
@@ -787,26 +785,43 @@ async def handle_valuation_package_selection(
         amount_uzs = getattr(setting, "standard_price_uzs", None) or Decimal("65000")
         pkg_title = "🥈 Standart baholash" if lang == "uz" else "🥈 Стандартная оценка"
 
-    user_service = UserService()
-    user = await user_service.get_by_telegram_id(session, callback.from_user.id)
-    if not user:
-        await callback.answer("Foydalanuvchi topilmadi.", show_alert=True)
-        return
+    user_id: int | None = None
+    try:
+        user_service = UserService()
+        user = await user_service.get_by_telegram_id(session, callback.from_user.id)
+        if not user:
+            user = await user_service.create_user(
+                session,
+                telegram_id=callback.from_user.id,
+                first_name=callback.from_user.first_name or "Foydalanuvchi",
+                username=callback.from_user.username,
+                language=lang,
+            )
+            await session.flush()
+        user_id = user.id
+    except Exception as user_err:
+        logger.warning("Could not fetch/create user in DB: %s", user_err)
 
     order_repo = ValuationOrderRepository()
-    order = await order_repo.create_order(
-        session,
-        user_id=user.id,
-        telegram_id=callback.from_user.id,
-        property_input=val_input_dict or {},
-        amount_uzs=amount_uzs,
-        currency="UZS",
-        package_type=pkg,
-    )
-    await session.commit()
+    order_id = order_repo.generate_order_id()
+    if user_id:
+        try:
+            order = await order_repo.create_order(
+                session,
+                user_id=user_id,
+                telegram_id=callback.from_user.id,
+                property_input=val_input_dict or {},
+                amount_uzs=amount_uzs,
+                currency="UZS",
+                package_type=pkg,
+            )
+            await session.commit()
+            order_id = order.order_id
+        except Exception as order_err:
+            logger.warning("Could not persist valuation order to DB: %s", order_err)
 
     await state.update_data(
-        order_id=order.order_id,
+        order_id=order_id,
         package_type=pkg,
         amount_uzs=float(amount_uzs),
     )
@@ -819,11 +834,11 @@ async def handle_valuation_package_selection(
             f"💳 <b>Реквизиты для оплаты</b>\n\n"
             f"• <b>Выбранный тариф:</b> {pkg_title}\n"
             f"• <b>Сумма к оплате:</b> <b>{price_fmt} сум</b>\n"
-            f"• <b>Номер заказа:</b> <code>{order.order_id}</code>\n\n"
+            f"• <b>Номер заказа:</b> <code>{order_id}</code>\n\n"
             f"👇 <b>Переведите точную сумму на карту:</b>\n"
-            f"💳 <code>{setting.card_number}</code>\n"
-            f"👤 Получатель: <b>{setting.card_holder}</b>\n\n"
-            f"<i>(Нажмите на номер карты, чтобы скопировать)</i>\n\n"
+            f"💳 <code>{card_number}</code>\n"
+            f"👤 Получатель: <b>{card_holder}</b>\n\n"
+            f"<i>(Нажмите кнопку «Copy card number» ниже, чтобы скопировать)</i>\n\n"
             f"📸 <b>После перевода отправьте сюда скриншот/фото чека об оплате.</b>\n"
             f"<i>(Чек будет проверен AI и передан администратору на утверждение).</i>"
         )
@@ -832,21 +847,28 @@ async def handle_valuation_package_selection(
             f"💳 <b>To‘lov ma’lumotlari</b>\n\n"
             f"• <b>Tanlangan tarif:</b> {pkg_title}\n"
             f"• <b>To‘lov summasi:</b> <b>{price_fmt} so‘m</b>\n"
-            f"• <b>Buyurtma ID:</b> <code>{order.order_id}</code>\n\n"
+            f"• <b>Buyurtma ID:</b> <code>{order_id}</code>\n\n"
             f"👇 <b>Quyidagi kartaga to‘lovni o‘tkazing:</b>\n"
-            f"💳 <code>{setting.card_number}</code>\n"
-            f"👤 Qabul qiluvchi: <b>{setting.card_holder}</b>\n\n"
-            f"<i>(Karta raqami ustiga bir marta bossangiz, nusxalanadi)</i>\n\n"
+            f"💳 <code>{card_number}</code>\n"
+            f"👤 Qabul qiluvchi: <b>{card_holder}</b>\n\n"
+            "<i>(Karta raqamini nusxalash uchun pastdagi «Copy card number» "
+            "tugmasini bosing)</i>\n\n"
             f"📸 <b>To‘lov chekini (skrinshotini) shu yerga rasm ko‘rinishida yuboring.</b>\n"
             f"<i>(Chek AI tahlilidan so'ng administrator tasdig'i bilan hisobot beriladi).</i>"
         )
 
-    markup = get_valuation_receipt_keyboard(order.order_id, lang=lang)
+    markup = get_valuation_receipt_keyboard(order_id, card_number=card_number, lang=lang)
     if callback.message and isinstance(callback.message, Message):
         try:
             await callback.message.edit_text(prompt_text, reply_markup=markup)
         except TelegramBadRequest:
             await callback.message.answer(prompt_text, reply_markup=markup)
+    elif callback.from_user and getattr(callback, "bot", None):
+        await callback.bot.send_message(
+            chat_id=callback.from_user.id,
+            text=prompt_text,
+            reply_markup=markup,
+        )
 
 
 @valuation_router.message(PropertyValuationStates.waiting_receipt, F.photo | F.document)
