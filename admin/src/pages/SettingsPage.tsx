@@ -643,7 +643,7 @@ export const SettingsPage: React.FC = () => {
                     marginBottom: "6px",
                   }}
                 >
-                  🥉 Basic (Bazaviy) — ~$4 (so'm):
+                  🥉 Basic tarifi narxi (so'm):
                 </label>
                 <input
                   id="bsc-price-input"
@@ -676,7 +676,7 @@ export const SettingsPage: React.FC = () => {
                     marginBottom: "6px",
                   }}
                 >
-                  🥈 Standart — ~$5 (so'm):
+                  🥈 Standard tarifi narxi (so'm):
                 </label>
                 <input
                   id="std-price-input"
@@ -709,7 +709,7 @@ export const SettingsPage: React.FC = () => {
                     marginBottom: "6px",
                   }}
                 >
-                  🥇 Ekspert / Premium — ~$7 (so'm):
+                  🥇 Premium tarifi narxi (so'm):
                 </label>
                 <input
                   id="prem-price-input"

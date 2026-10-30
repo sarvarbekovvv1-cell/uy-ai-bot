@@ -1424,22 +1424,22 @@ def get_valuation_package_keyboard(
     prem_fmt = f"{premium_price:,}".replace(",", " ")
 
     if lang == "ru":
-        bsc_text = f"🥉 Базовый — {bsc_fmt} сум (~$4)"
-        std_text = f"🥈 Стандарт — {std_fmt} сум (~$5)"
-        prem_text = f"🥇 Премиум — {prem_fmt} сум (~$7)"
-        cancel_text = "❌ Отмена"
+        bsc_text = f"🥉 BASIC — {bsc_fmt} сум"
+        std_text = f"🥈 STANDARD — {std_fmt} сум"
+        prem_text = f"🥇 PREMIUM — {prem_fmt} сум"
+        back_text = "⬅️ Назад"
     else:
-        bsc_text = f"🥉 Basic (Bazaviy) — {bsc_fmt} so‘m (~$4)"
-        std_text = f"🥈 Standard (Standart) — {std_fmt} so‘m (~$5)"
-        prem_text = f"🥇 Premium (Ekspert) — {prem_fmt} so‘m (~$7)"
-        cancel_text = "❌ Bekor qilish"
+        bsc_text = f"🥉 BASIC — {bsc_fmt} so‘m"
+        std_text = f"🥈 STANDARD — {std_fmt} so‘m"
+        prem_text = f"🥇 PREMIUM — {prem_fmt} so‘m"
+        back_text = "⬅️ Ortga"
 
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=bsc_text, callback_data="val_pkg:basic")],
             [InlineKeyboardButton(text=std_text, callback_data="val_pkg:standard")],
             [InlineKeyboardButton(text=prem_text, callback_data="val_pkg:premium")],
-            [InlineKeyboardButton(text=cancel_text, callback_data="val_cancel")],
+            [InlineKeyboardButton(text=back_text, callback_data="val_pkg_back")],
         ]
     )
 

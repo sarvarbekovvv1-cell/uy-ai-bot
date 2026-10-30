@@ -43,6 +43,14 @@ PAID_AI_VALUATION_BUTTONS = {
     "📊 AI orqali uy baholash",
     "📊 Оценка через AI",
     "📊 AI оценка недвижимости",
+    "🚀 Kengaytirilgan AI tahlil",
+    "🚀 Kengaytirilgan AI tahlili",
+    "Kengaytirilgan AI tahlil",
+    "Kengaytirilgan AI tahlili",
+    "🚀 Расширенный AI анализ",
+    "Расширенный AI анализ",
+    "🚀 Advanced AI Analysis",
+    "Advanced AI Analysis",
     "/ai_valuation",
 }
 
@@ -570,39 +578,41 @@ async def handle_valuation_currency(
                 if lang == "ru":
                     pkg_text = (
                         f"{summary_text}\n"
-                        "📊 <b>Выберите уровень услуги оценки:</b>\n\n"
-                        f"1️⃣ 🥉 <b>Базовый — {bsc_price_fmt} сум (~$4)</b>\n"
-                        "• Расчет ориентировочной рыночной стоимости\n"
-                        "• Средняя цена за 1 м² в районе\n"
-                        "• Краткое заключение AI\n\n"
-                        f"2️⃣ 🥈 <b>Стандарт — {std_price_fmt} сум (~$5)</b>\n"
-                        "• Диапазон рыночной цены (мин/макс) и центральная оценка\n"
-                        "• Анализ сравнительных объектов (аналоги на рынке)\n"
-                        "• Оценка ликвидности и факторов состояния/локации\n\n"
-                        f"3️⃣ 🥇 <b>Премиум — {prem_price_fmt} сум (~$7)</b>\n"
-                        "• Все функции тарифа «Стандарт»\n"
-                        "• 📈 Доходность от аренды (Gross Yield & ROI)\n"
-                        "• 🔮 Прогноз динамики цен на 1–2 года\n"
-                        "• 💡 Экспертная стратегия продажи объекта"
+                        "📊 <b>Выберите тариф расширенной AI оценки:</b>\n\n"
+                        f"1️⃣ 🥉 <b>Basic (Базовый) — {bsc_price_fmt} сум</b>\n"
+                        "• Базовый AI анализ недвижимости\n"
+                        "• Ориентировочная рыночная стоимость\n"
+                        "• Основной ценовой диапазон\n\n"
+                        f"2️⃣ 🥈 <b>Standard (Стандарт) — {std_price_fmt} сум</b>\n"
+                        "• Все возможности тарифа Basic\n"
+                        "• Расширенный анализ рынка\n"
+                        "• Факторы, влияющие на цену\n"
+                        "• Более подробный отчет об оценке\n\n"
+                        f"3️⃣ 🥇 <b>Premium (Премиум) — {prem_price_fmt} сум</b>\n"
+                        "• Все возможности тарифа Standard\n"
+                        "• Максимально детальный AI анализ\n"
+                        "• Дополнительные рекомендации и инвестиционный анализ\n"
+                        "• Полный экспертный отчет об оценке"
                     )
                 else:
                     pkg_text = (
                         f"{summary_text}\n"
                         "📊 <b>Baholash xizmati tarifini tanlang:</b>\n\n"
-                        f"1️⃣ 🥉 <b>Basic (Bazaviy) — {bsc_price_fmt} so‘m (~$4)</b>\n"
-                        "• Uyning taxminiy bozor narxi va 1 m² qiymati\n"
-                        "• Sun'iy intellektdan qisqa xulosa\n\n"
-                        f"2️⃣ 🥈 <b>Standard (Standart) — {std_price_fmt} so‘m (~$5)</b>\n"
-                        "• Bozor narxi oralig‘i (min/max) va markaziy baho\n"
-                        "• O‘xshash e'lonlar bilan taqqoslama tahlil\n"
-                        "• Ta'mir va joylashuv omillari bo‘yicha AI izohi\n\n"
-                        f"3️⃣ 🥇 <b>Premium (Ekspert) — {prem_price_fmt} so‘m (~$7)</b>\n"
+                        f"1️⃣ 🥉 <b>Basic (Bazaviy) — {bsc_price_fmt} so‘m</b>\n"
+                        "• Asosiy AI ko‘chmas mulk tahlili\n"
+                        "• Mulkning taxminiy bozor qiymati\n"
+                        "• Asosiy narx diapazoni\n\n"
+                        f"2️⃣ 🥈 <b>Standard (Standart) — {std_price_fmt} so‘m</b>\n"
+                        "• Basic tarifidagi barcha imkoniyatlar\n"
+                        "• Kengaytirilgan bozor tahlili\n"
+                        "• Narxga ta'sir qiluvchi omillar\n"
+                        "• Batafsilroq baholash hisoboti\n\n"
+                        f"3️⃣ 🥇 <b>Premium (Ekspert) — {prem_price_fmt} so‘m</b>\n"
                         "• Standart tarifdagi barcha imkoniyatlar\n"
-                        "• 📈 Ijara rentabelligi va yillik daromadlilik (ROI)\n"
-                        "• 🔮 Kelgusi 1–2 yillik narx dinamikasi prognozi\n"
-                        "• 💡 Ekspert sotish strategiyasi va tavsiyalar"
+                        "• Eng batafsil AI tahlili\n"
+                        "• Qo‘shimcha tavsiyalar va investitsion tahlil\n"
+                        "• To‘liqroq baholash hisoboti"
                     )
-
                 markup = get_valuation_package_keyboard(
                     int(card_setting.basic_price_uzs),
                     int(card_setting.standard_price_uzs),
@@ -750,6 +760,22 @@ async def handle_valuation_package_selection(
 
     card_repo = PaymentCardSettingRepository()
     setting = await card_repo.get_setting(session)
+
+    if not setting.is_configured():
+        notice_text = (
+            "⚠️ <b>To‘lov qabul qilish tizimi sozlanmoqda.</b>\n\n"
+            "Hozirda administrator to‘lov kartasi rekvizitlarini yangilamoqda. "
+            "Tez orada to‘lov to‘liq faollashtiriladi.\n"
+            "Iltimos, keyinroq urinib ko‘ring yoki brokerimiz bilan bog‘laning."
+            if lang == "uz"
+            else
+            "⚠️ <b>Система приема платежей настраивается.</b>\n\n"
+            "В настоящее время администратор обновляет реквизиты карты для оплаты.\n"
+            "Пожалуйста, повторите попытку позже или обратитесь к брокеру."
+        )
+        if callback.message and isinstance(callback.message, Message):
+            await callback.message.answer(notice_text, reply_markup=get_main_menu_keyboard(lang))
+        return
 
     if pkg == "basic":
         amount_uzs = setting.basic_price_uzs
@@ -1523,9 +1549,7 @@ async def handle_valuation_action_menu(
         )
 
 
-@valuation_router.callback_query(
-    PropertyValuationStates.viewing_result, F.data == "val_act:upgrade_ai"
-)
+@valuation_router.callback_query(F.data == "val_act:upgrade_ai")
 async def handle_valuation_upgrade_ai(
     callback: CallbackQuery,
     state: FSMContext,
@@ -1540,8 +1564,32 @@ async def handle_valuation_upgrade_ai(
     lang = data.get("language", "uz")
     raw_input = data.get("val_input")
 
+    # If raw_input is missing, check if user has a recent property valuation in DB
     if not raw_input:
-        await callback.answer("Mulk ma'lumotlari topilmadi.", show_alert=True)
+        order_repo = ValuationOrderRepository()
+        recent_order = await order_repo.get_latest_pending_for_user(session, callback.from_user.id)
+        if recent_order and recent_order.property_input:
+            raw_input = recent_order.property_input
+            await state.update_data(val_input=raw_input)
+
+    if not raw_input:
+        msg = (
+            "ℹ️ <b>Kengaytirilgan AI tahlili uchun avval mulk parametrlarini kiriting:</b>"
+            if lang == "uz"
+            else "ℹ️ <b>Для расширенного AI анализа сначала введите параметры недвижимости:</b>"
+        )
+        await state.update_data(
+            user_id=callback.from_user.id,
+            language=lang,
+            region="Toshkent shahri",
+            is_paid_flow=True,
+        )
+        await state.set_state(PropertyValuationStates.waiting_listing_type)
+        if isinstance(callback.message, Message):
+            await callback.message.answer(
+                msg,
+                reply_markup=get_valuation_listing_type_keyboard(lang=lang),
+            )
         return
 
     val_input = PropertyValuationInput.model_validate(raw_input)
@@ -1549,71 +1597,100 @@ async def handle_valuation_upgrade_ai(
     card_repo = PaymentCardSettingRepository()
     card_setting = await card_repo.get_setting(session)
 
-    if card_setting.is_configured():
-        await state.set_state(PropertyValuationStates.waiting_package)
+    # Always present packages to user
+    await state.set_state(PropertyValuationStates.waiting_package)
 
-        bsc_price_fmt = f"{int(card_setting.basic_price_uzs):,}".replace(",", " ")
-        std_price_fmt = f"{int(card_setting.standard_price_uzs):,}".replace(",", " ")
-        prem_price_fmt = f"{int(card_setting.premium_price_uzs):,}".replace(",", " ")
-        summary_text = format_valuation_input_summary(val_input, lang)
+    bsc_price_fmt = f"{int(card_setting.basic_price_uzs):,}".replace(",", " ")
+    std_price_fmt = f"{int(card_setting.standard_price_uzs):,}".replace(",", " ")
+    prem_price_fmt = f"{int(card_setting.premium_price_uzs):,}".replace(",", " ")
+    summary_text = format_valuation_input_summary(val_input, lang)
 
-        if lang == "ru":
-            pkg_text = (
-                f"{summary_text}\n"
-                "📊 <b>Выберите уровень услуги расширенной AI оценки:</b>\n\n"
-                f"1️⃣ 🥉 <b>Базовый — {bsc_price_fmt} сум (~$4)</b>\n"
-                "• Расчет ориентировочной рыночной стоимости\n"
-                "• Средняя цена за 1 м² в районе\n"
-                "• Краткое заключение AI\n\n"
-                f"2️⃣ 🥈 <b>Стандарт — {std_price_fmt} сум (~$5)</b>\n"
-                "• Диапазон рыночной цены (мин/макс) и центральная оценка\n"
-                "• Анализ сравнительных объектов (аналоги на рынке)\n"
-                "• Оценка ликвидности и факторов состояния/локации\n\n"
-                f"3️⃣ 🥇 <b>Премиум — {prem_price_fmt} сум (~$7)</b>\n"
-                "• Все функции тарифа «Стандарт»\n"
-                "• 📈 Доходность от аренды (Gross Yield & ROI)\n"
-                "• 🔮 Прогноз динамики цен на 1–2 года\n"
-                "• 💡 Экспертная стратегия продажи объекта"
-            )
-        else:
-            pkg_text = (
-                f"{summary_text}\n"
-                "📊 <b>Kengaytirilgan AI baholash xizmati tarifini tanlang:</b>\n\n"
-                f"1️⃣ 🥉 <b>Basic (Bazaviy) — {bsc_price_fmt} so‘m (~$4)</b>\n"
-                "• Uyning taxminiy bozor narxi va 1 m² qiymati\n"
-                "• Sun'iy intellektdan qisqa xulosa\n\n"
-                f"2️⃣ 🥈 <b>Standard (Standart) — {std_price_fmt} so‘m (~$5)</b>\n"
-                "• Bozor narxi oralig‘i (min/max) va markaziy baho\n"
-                "• O‘xshash e'lonlar bilan taqqoslama tahlil\n"
-                "• Ta'mir va joylashuv omillari bo‘yicha AI izohi\n\n"
-                f"3️⃣ 🥇 <b>Premium (Ekspert) — {prem_price_fmt} so‘m (~$7)</b>\n"
-                "• Standart tarifdagi barcha imkoniyatlar\n"
-                "• 📈 Ijara rentabelligi va yillik daromadlilik (ROI)\n"
-                "• 🔮 Kelgusi 1–2 yillik narx dinamikasi prognozi\n"
-                "• 💡 Ekspert sotish strategiyasi va tavsiyalar"
-            )
-
-        markup = get_valuation_package_keyboard(
-            int(card_setting.basic_price_uzs),
-            int(card_setting.standard_price_uzs),
-            int(card_setting.premium_price_uzs),
-            lang=lang,
+    if lang == "ru":
+        pkg_text = (
+            f"{summary_text}\n"
+            "📊 <b>Выберите тариф расширенного AI анализа:</b>\n\n"
+            f"1️⃣ 🥉 <b>Basic (Базовый) — {bsc_price_fmt} сум</b>\n"
+            "• Базовый AI анализ недвижимости\n"
+            "• Ориентировочная рыночная стоимость\n"
+            "• Основной ценовой диапазон\n\n"
+            f"2️⃣ 🥈 <b>Standard (Стандарт) — {std_price_fmt} сум</b>\n"
+            "• Все возможности тарифа Basic\n"
+            "• Расширенный анализ рынка\n"
+            "• Факторы, влияющие на цену\n"
+            "• Более подробный отчет об оценке\n\n"
+            f"3️⃣ 🥇 <b>Premium (Премиум) — {prem_price_fmt} сум</b>\n"
+            "• Все возможности тарифа Standard\n"
+            "• Максимально детальный AI анализ\n"
+            "• Дополнительные рекомендации и инвестиционный анализ\n"
+            "• Полный экспертный отчет об оценке"
+        )
+    else:
+        pkg_text = (
+            f"{summary_text}\n"
+            "📊 <b>Kengaytirilgan AI baholash xizmati tarifini tanlang:</b>\n\n"
+            f"1️⃣ 🥉 <b>Basic (Bazaviy) — {bsc_price_fmt} so‘m</b>\n"
+            "• Asosiy AI ko‘chmas mulk tahlili\n"
+            "• Mulkning taxminiy bozor qiymati\n"
+            "• Asosiy narx diapazoni\n\n"
+            f"2️⃣ 🥈 <b>Standard (Standart) — {std_price_fmt} so‘m</b>\n"
+            "• Basic tarifidagi barcha imkoniyatlar\n"
+            "• Kengaytirilgan bozor tahlili\n"
+            "• Narxga ta'sir qiluvchi omillar\n"
+            "• Batafsilroq baholash hisoboti\n\n"
+            f"3️⃣ 🥇 <b>Premium (Ekspert) — {prem_price_fmt} so‘m</b>\n"
+            "• Standart tarifdagi barcha imkoniyatlar\n"
+            "• Eng batafsil AI tahlili\n"
+            "• Qo‘shimcha tavsiyalar va investitsion tahlil\n"
+            "• To‘liqroq baholash hisoboti"
         )
 
-        if isinstance(callback.message, Message):
+    markup = get_valuation_package_keyboard(
+        int(card_setting.basic_price_uzs),
+        int(card_setting.standard_price_uzs),
+        int(card_setting.premium_price_uzs),
+        lang=lang,
+    )
+
+    if isinstance(callback.message, Message):
+        try:
+            await callback.message.edit_text(pkg_text, reply_markup=markup)
+        except TelegramBadRequest:
+            await callback.message.answer(pkg_text, reply_markup=markup)
+
+
+@valuation_router.callback_query(
+    PropertyValuationStates.waiting_package, F.data == "val_pkg_back"
+)
+async def handle_valuation_package_back(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
+    """Return from package tier selection back to valuation result card or main menu."""
+    await callback.answer()
+    data = await state.get_data()
+    lang = data.get("language", "uz")
+    raw_input = data.get("val_input")
+    raw_result = data.get("last_result")
+
+    if raw_input and raw_result:
+        val_input = PropertyValuationInput.model_validate(raw_input)
+        val_result = PropertyValuationResult.model_validate(raw_result)
+        card_text = format_valuation_result_card(val_input, val_result, lang)
+        markup = get_valuation_actions_keyboard(
+            has_comps=bool(val_result.comparable_properties),
+            listing_type=val_input.listing_type,
+            lang=lang,
+        )
+        await state.set_state(PropertyValuationStates.viewing_result)
+        if callback.message and isinstance(callback.message, Message):
             try:
-                await callback.message.edit_text(pkg_text, reply_markup=markup)
+                await callback.message.edit_text(card_text, reply_markup=markup)
             except TelegramBadRequest:
-                await callback.message.answer(pkg_text, reply_markup=markup)
+                await callback.message.answer(card_text, reply_markup=markup)
         return
 
-    notice_text = (
-        "⚠️ <b>Kengaytirilgan AI tahlil xizmati sozlanmoqda.</b>\n\n"
-        "Hozirda to‘lov rekvizitlari yangilanmoqda. Tez orada ushbu imkoniyat to‘liq ishga tushadi."
-        if lang == "uz"
-        else
-        "⚠️ <b>Система расширенного AI анализа настраивается.</b>\n\n"
-        "В настоящее время платежные реквизиты обновляются. Скоро функция станет доступна."
-    )
-    if isinstance(callback.message, Message):
-        await callback.message.answer(notice_text)
+    # If no prior valuation result in state, return to main menu
+    await state.clear()
+    msg = get_text("main_menu_title", lang)
+    if callback.message and isinstance(callback.message, Message):
+        await callback.message.answer(msg, reply_markup=get_main_menu_keyboard(lang))
