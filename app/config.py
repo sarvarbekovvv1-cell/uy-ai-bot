@@ -92,8 +92,11 @@ class Settings(BaseSettings):
     admin_session_cookie_secure: bool = Field(default=False, alias="ADMIN_SESSION_COOKIE_SECURE")
     admin_session_secret: str = Field(default="", alias="ADMIN_SESSION_SECRET")
 
-    # Media Storage Configuration
+    # Persistent Media Storage Configuration
     media_storage_dir: str = Field(default=".cache/media", alias="MEDIA_STORAGE_DIR")
+
+    # System & Broker Configuration
+    broker_phone: str = Field(default="+998 71 200 00 00", alias="BROKER_PHONE")
 
     # Payment & Monetization Configuration
     valuation_price_uzs: int = Field(default=0, alias="VALUATION_PRICE_UZS")

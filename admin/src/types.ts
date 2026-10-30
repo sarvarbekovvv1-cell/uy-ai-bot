@@ -390,6 +390,15 @@ export interface PaymentCardSettingUpdateInput {
   is_active?: boolean;
 }
 
+export interface BrokerPhoneSettingItem {
+  broker_phone: string;
+  updated_at?: string | null;
+}
+
+export interface BrokerPhoneSettingUpdateInput {
+  broker_phone: string;
+}
+
 export interface ValuationOrderItem {
   id: number;
   order_id: string;

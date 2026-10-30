@@ -38,3 +38,25 @@ def normalize_phone_number(raw_phone: str) -> str | None:
         return f"+{digits}"
 
     return None
+
+
+def format_uzbek_phone(raw_phone: str) -> str | None:
+    """Format phone number into readable display format (+998 XX XXX XX XX).
+
+    If the number is a valid 12-digit Uzbekistan number (+998XXXXXXXXX), formats it as:
+    +998 71 200 00 00 or +998 90 123 45 67.
+    If it is a valid international number, returns normalized E.164 string.
+    Returns None if raw_phone is invalid.
+    """
+    normalized = normalize_phone_number(raw_phone)
+    if not normalized:
+        return None
+
+    if normalized.startswith("+998") and len(normalized) == 13:
+        return (
+            f"{normalized[:4]} {normalized[4:6]} {normalized[6:9]} "
+            f"{normalized[9:11]} {normalized[11:]}"
+        )
+
+    return normalized
+

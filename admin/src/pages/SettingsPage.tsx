@@ -29,6 +29,13 @@ export const SettingsPage: React.FC = () => {
   const [paymentSettingsSuccess, setPaymentSettingsSuccess] = useState<string | null>(null);
   const [paymentSettingsError, setPaymentSettingsError] = useState<string | null>(null);
 
+  // Professional Broker Phone state
+  const [brokerPhone, setBrokerPhone] = useState("");
+  const [currentSavedPhone, setCurrentSavedPhone] = useState("");
+  const [brokerPhoneLoading, setBrokerPhoneLoading] = useState(false);
+  const [brokerPhoneSuccess, setBrokerPhoneSuccess] = useState<string | null>(null);
+  const [brokerPhoneError, setBrokerPhoneError] = useState<string | null>(null);
+
   useEffect(() => {
     adminApi
       .getPaymentSettings()
@@ -43,7 +50,53 @@ export const SettingsPage: React.FC = () => {
       .catch((err) => {
         console.error("Failed to load payment settings:", err);
       });
+
+    adminApi
+      .getBrokerPhone()
+      .then((data) => {
+        setBrokerPhone(data.broker_phone || "");
+        setCurrentSavedPhone(data.broker_phone || "");
+      })
+      .catch((err) => {
+        console.error("Failed to load broker phone setting:", err);
+      });
   }, []);
+
+  const handleBrokerPhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBrokerPhoneError(null);
+    setBrokerPhoneSuccess(null);
+
+    const trimmed = brokerPhone.trim();
+    if (!trimmed) {
+      setBrokerPhoneError("Telefon raqamini kiriting.");
+      return;
+    }
+
+    const digitsOnly = trimmed.replace(/\D/g, "");
+    if (digitsOnly.length < 9 || digitsOnly.length > 15) {
+      setBrokerPhoneError(
+        "Telefon raqami noto'g'ri formatda. Kamida 9 ta raqam bo'lishi kerak (masalan: +998 90 123 45 67)."
+      );
+      return;
+    }
+
+    setBrokerPhoneLoading(true);
+    try {
+      const updated = await adminApi.updateBrokerPhone({ broker_phone: trimmed });
+      setBrokerPhoneSuccess("Professional broker telefon raqami muvaffaqiyatli saqlandi!");
+      setBrokerPhone(updated.broker_phone);
+      setCurrentSavedPhone(updated.broker_phone);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setBrokerPhoneError(err.message);
+      } else {
+        setBrokerPhoneError("Telefon raqamini saqlashda xatolik yuz berdi.");
+      }
+    } finally {
+      setBrokerPhoneLoading(false);
+    }
+  };
 
   const handlePaymentSettingsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -712,6 +765,156 @@ export const SettingsPage: React.FC = () => {
               }}
             >
               {paymentSettingsLoading ? "Saqlanmoqda..." : "Sozlamalarni saqlash"}
+            </button>
+          </form>
+        </section>
+
+        {/* Professional Broker Phone Card */}
+        <section
+          style={{
+            backgroundColor: "#1e293b",
+            borderRadius: "12px",
+            border: "1px solid #334155",
+            padding: "24px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#e2e8f0" }}>
+              👨‍💼 Professional broker telefon raqami
+            </h2>
+            <span
+              style={{
+                backgroundColor: currentSavedPhone ? "#15803d" : "#64748b",
+                color: "#ffffff",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                padding: "4px 10px",
+                borderRadius: "9999px",
+              }}
+            >
+              {currentSavedPhone ? "Faol" : "Kiritilmagan"}
+            </span>
+          </div>
+
+          <p style={{ color: "#94a3b8", fontSize: "0.875rem", marginBottom: "20px" }}>
+            Telegram botdagi "Professional broker xizmati" bo'limida mijozlarga ko'rsatiladigan rasmiy aloqa telefon raqami. O'zgarishlar botda darhol aks etadi.
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              marginBottom: "20px",
+              padding: "12px 16px",
+              backgroundColor: "#0f172a",
+              borderRadius: "8px",
+              border: "1px solid #334155",
+            }}
+          >
+            <span style={{ color: "#94a3b8", fontSize: "0.875rem" }}>Joriy saqlangan raqam:</span>
+            <span
+              data-testid="current-broker-phone"
+              style={{
+                fontFamily: "monospace",
+                fontWeight: 600,
+                color: "#60a5fa",
+                fontSize: "1rem",
+              }}
+            >
+              {currentSavedPhone || "—"}
+            </span>
+          </div>
+
+          {brokerPhoneSuccess && (
+            <div
+              data-testid="broker-phone-success"
+              style={{
+                padding: "12px 16px",
+                backgroundColor: "#064e3b",
+                border: "1px solid #059669",
+                borderRadius: "8px",
+                color: "#a7f3d0",
+                fontSize: "0.875rem",
+                marginBottom: "20px",
+              }}
+            >
+              ✅ {brokerPhoneSuccess}
+            </div>
+          )}
+
+          {brokerPhoneError && (
+            <div
+              data-testid="broker-phone-error"
+              style={{
+                padding: "12px 16px",
+                backgroundColor: "#450a0a",
+                border: "1px solid #dc2626",
+                borderRadius: "8px",
+                color: "#fca5a5",
+                fontSize: "0.875rem",
+                marginBottom: "20px",
+              }}
+            >
+              ❌ {brokerPhoneError}
+            </div>
+          )}
+
+          <form
+            onSubmit={handleBrokerPhoneSubmit}
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+          >
+            <div>
+              <label
+                htmlFor="broker-phone-input"
+                style={{
+                  display: "block",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: "#cbd5e1",
+                  marginBottom: "6px",
+                }}
+              >
+                Professional broker telefon raqami
+              </label>
+              <input
+                id="broker-phone-input"
+                data-testid="broker-phone-input"
+                type="text"
+                placeholder="masalan: +998 71 200 00 00 yoki +998 90 123 45 67"
+                value={brokerPhone}
+                onChange={(e) => setBrokerPhone(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  backgroundColor: "#0f172a",
+                  border: "1px solid #334155",
+                  borderRadius: "8px",
+                  color: "#f8fafc",
+                  fontSize: "0.95rem",
+                  fontFamily: "monospace",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              data-testid="save-broker-phone-button"
+              disabled={brokerPhoneLoading || !brokerPhone.trim()}
+              style={{
+                alignSelf: "flex-start",
+                padding: "10px 24px",
+                backgroundColor: brokerPhoneLoading || !brokerPhone.trim() ? "#475569" : "#2563eb",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                cursor: brokerPhoneLoading || !brokerPhone.trim() ? "not-allowed" : "pointer",
+              }}
+            >
+              {brokerPhoneLoading ? "Saqlanmoqda..." : "Saqlash"}
             </button>
           </form>
         </section>

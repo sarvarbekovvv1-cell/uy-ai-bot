@@ -25,6 +25,19 @@ describe("Admin Settings Validations", () => {
     return { valid: true };
   };
 
+  const validateBrokerPhone = (val: string): { valid: boolean; error?: string } => {
+    const trimmed = val.trim();
+    if (!trimmed) return { valid: false, error: "Telefon raqamini kiriting." };
+    const digitsOnly = trimmed.replace(/\D/g, "");
+    if (digitsOnly.length < 9 || digitsOnly.length > 15) {
+      return {
+        valid: false,
+        error: "Telefon raqami noto'g'ri formatda. Kamida 9 ta raqam bo'lishi kerak (masalan: +998 90 123 45 67).",
+      };
+    }
+    return { valid: true };
+  };
+
   it("validates username format and length", () => {
     expect(validateUsername("").valid).toBe(false);
     expect(validateUsername("  ").valid).toBe(false);
@@ -42,5 +55,15 @@ describe("Admin Settings Validations", () => {
     expect(validatePassword("OldPassword123!", "a".repeat(129), "a".repeat(129)).valid).toBe(false);
     expect(validatePassword("OldPassword123!", "NewPassword123!", "DifferentPassword123!").valid).toBe(false);
     expect(validatePassword("OldPassword123!", "NewPassword123!", "NewPassword123!").valid).toBe(true);
+  });
+
+  it("validates broker phone format and length", () => {
+    expect(validateBrokerPhone("").valid).toBe(false);
+    expect(validateBrokerPhone("   ").valid).toBe(false);
+    expect(validateBrokerPhone("123").valid).toBe(false); // too short
+    expect(validateBrokerPhone("+998 71 200 00 00").valid).toBe(true);
+    expect(validateBrokerPhone("+998 90 123 45 67").valid).toBe(true);
+    expect(validateBrokerPhone("901234567").valid).toBe(true);
+    expect(validateBrokerPhone("1".repeat(16)).valid).toBe(false); // too long
   });
 });

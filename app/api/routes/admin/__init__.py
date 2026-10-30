@@ -11,6 +11,7 @@ from app.api.routes.admin.kaizen import router as kaizen_router
 from app.api.routes.admin.leads import router as leads_router
 from app.api.routes.admin.payment_settings import router as payment_settings_router
 from app.api.routes.admin.properties import router as properties_router
+from app.api.routes.admin.system_settings import router as system_settings_router
 from app.api.routes.admin.users import router as users_router
 from app.api.routes.admin.valuation_orders import router as valuation_orders_router
 from app.api.routes.admin.viewings import router as viewings_router
@@ -29,5 +30,6 @@ admin_router.include_router(audit_router)
 admin_router.include_router(kaizen_router)
 admin_router.include_router(valuation_orders_router)
 admin_router.include_router(payment_settings_router)
+admin_router.include_router(system_settings_router)
 
 __all__ = ["admin_router"]

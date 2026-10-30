@@ -1460,29 +1460,42 @@ async def handle_valuation_action_submit(
         )
 
 
-@valuation_router.callback_query(PropertyValuationStates.viewing_result, F.data == "val_act:broker")
+@valuation_router.callback_query(F.data == "val_act:broker")
 async def handle_valuation_action_broker(
     callback: CallbackQuery,
     state: FSMContext,
+    session: AsyncSession,
 ) -> None:
-    """Redirect user to broker contact service."""
+    """Redirect user to broker contact service with dynamic phone from settings."""
     await callback.answer()
     data = await state.get_data()
     lang = data.get("language", "uz")
     await state.clear()
 
+    from app.repositories.system_setting_repository import SystemSettingRepository
+
+    setting_repo = SystemSettingRepository()
+    phone = await setting_repo.get_broker_phone(session)
+
     broker_text = (
         "👨‍💼 <b>Professional broker xizmati</b>\n\n"
         "Bizning malakali brokerlarimiz ko‘chmas mulkingizni eng ma'qul narxda sotish, "
         "sotib olish yoki ijaraga berishda yordam berishadi.\n\n"
-        "Aloqa uchun telefon: <b>+998 71 200 00 00</b>"
+        f"Aloqa uchun telefon: <b>{phone}</b>"
     )
     if lang == "ru":
         broker_text = (
             "👨‍💼 <b>Услуги профессионального брокера</b>\n\n"
             "Наши сертифицированные брокеры помогут вам выгодно продать, "
             "купить или сдать в аренду вашу недвижимость.\n\n"
-            "Телефон для связи: <b>+998 71 200 00 00</b>"
+            f"Телефон для связи: <b>{phone}</b>"
+        )
+    elif lang == "en":
+        broker_text = (
+            "👨‍💼 <b>Professional Broker Service</b>\n\n"
+            "Our qualified brokers will help you buy, sell, or lease your property "
+            "at the best market price.\n\n"
+            f"Contact phone: <b>{phone}</b>"
         )
 
     if callback.message and isinstance(callback.message, Message):

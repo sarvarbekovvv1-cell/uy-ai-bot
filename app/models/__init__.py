@@ -42,6 +42,7 @@ from app.models.property import (
 )
 from app.models.property_media import PropertyMedia
 from app.models.role import DEFAULT_CUSTOMER_ROLE, SYSTEM_ROLES, Role, UserRole
+from app.models.system_setting import SystemSetting
 from app.models.user import User
 from app.models.valuation_order import (
     PAYMENT_PROVIDERS,
@@ -102,6 +103,7 @@ __all__ = [
     "ValuationOrder",
     "PaymentTransaction",
     "PaymentCardSetting",
+    "SystemSetting",
     "VALUATION_PAYMENT_STATUSES",
     "VALUATION_STATUSES",
     "PAYMENT_PROVIDERS",

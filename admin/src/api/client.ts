@@ -4,6 +4,8 @@
 
 import type {
   AuditEventItem,
+  BrokerPhoneSettingItem,
+  BrokerPhoneSettingUpdateInput,
   BrokerWorkloadItem,
   CRMOutboxEventItem,
   DashboardKPIs,
@@ -586,6 +588,20 @@ export const adminApi = {
     data: PaymentCardSettingUpdateInput
   ): Promise<PaymentCardSettingItem> {
     return request<PaymentCardSettingItem>("/api/admin/v1/payment-settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // --- System Settings (Professional Broker Phone) ---
+  async getBrokerPhone(): Promise<BrokerPhoneSettingItem> {
+    return request<BrokerPhoneSettingItem>("/api/admin/v1/system-settings/broker-phone");
+  },
+
+  async updateBrokerPhone(
+    data: BrokerPhoneSettingUpdateInput
+  ): Promise<BrokerPhoneSettingItem> {
+    return request<BrokerPhoneSettingItem>("/api/admin/v1/system-settings/broker-phone", {
       method: "PUT",
       body: JSON.stringify(data),
     });
