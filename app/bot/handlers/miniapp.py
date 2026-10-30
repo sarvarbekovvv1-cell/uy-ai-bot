@@ -41,7 +41,7 @@ async def handle_miniapp_button(
 
     if settings.miniapp_url:
         title = (
-            "🗺 <b>UyAI Xaritasi va Mini App</b>\n\n"
+            "🗺 <b>UyIQ Xaritasi va Mini App</b>\n\n"
             "Interaktiv xarita orqali barcha tasdiqlangan ko‘chmas mulklarni ko‘rishingiz, "
             "filtrlar yordamida qidirishingiz va saqlab qo‘yishingiz mumkin.\n\n"
             "Ilovani ochish uchun quyidagi tugmani bosing:"
@@ -49,7 +49,7 @@ async def handle_miniapp_button(
         btn_label = "🗺 Xaritani ochish"
         if lang == "ru":
             title = (
-                "🗺 <b>Карта и Mini App UyAI</b>\n\n"
+                "🗺 <b>Карта и Mini App UyIQ</b>\n\n"
                 "Вы можете просматривать все проверенные объекты на интерактивной карте, "
                 "использовать фильтry и сохранять в избранное.\n\n"
                 "Нажмите кнопку ниже, чтобы открыть приложение:"

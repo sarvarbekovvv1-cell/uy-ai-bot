@@ -1315,7 +1315,7 @@ def format_valuation_result_card(
                 f"📈 <b>Уровень достоверности:</b> {conf_label}\n"
                 f"{method_info}"
                 f"{explanation_text}\n\n"
-                f"⚠️ <i>Это базовая расчетная оценка на основе данных UyAI.</i>"
+                f"⚠️ <i>Это базовая расчетная оценка на основе данных UyIQ.</i>"
             )
 
         return (
@@ -1335,7 +1335,7 @@ def format_valuation_result_card(
             f"{method_info}"
             f"{explanation_text}"
             f"{premium_section}\n\n"
-            f"⚠️ <i>Это расчетная рыночная оценка на основе данных UyAI, "
+            f"⚠️ <i>Это расчетная рыночная оценка на основе данных UyIQ, "
             f"не является официальной экспертизой.</i>"
         )
 

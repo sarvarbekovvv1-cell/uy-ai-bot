@@ -8,7 +8,7 @@ MESSAGES: dict[str, str] = {
     "btn_en": "🇺🇸 English",
     # Consent
     "consent_text": (
-        "UyAI xizmatidan foydalanish davomida Telegram profilingiz va siz taqdim "
+        "UyIQ xizmatidan foydalanish davomida Telegram profilingiz va siz taqdim "
         "etgan aloqa ma’lumotlari xizmat ko‘rsatish maqsadida qayta ishlanadi.\n\n"
         "Davom etish orqali bunga rozilik bildirasiz."
     ),
@@ -35,8 +35,8 @@ MESSAGES: dict[str, str] = {
     ),
     # Registration & Welcome
     "registration_complete": "Tabriklaymiz! Ro‘yxatdan o‘tish muvaffaqiyatli yakunlandi.",
-    "welcome_back": "🏢 UyAI tizimiga qayta xush kelibsiz!",
-    "main_menu_title": "🏢 UyAI — Asosiy menyu\nQuyidagi xizmatlardan birini tanlang:",
+    "welcome_back": "🏢 UyIQ tizimiga qayta xush kelibsiz!",
+    "main_menu_title": "🏢 UyIQ — Asosiy menyu\nQuyidagi xizmatlardan birini tanlang:",
     # Main Menu Buttons
     "btn_buy": "🏠 Uy sotib olish",
     "btn_rent": "🔑 Uy ijaraga olish",
@@ -162,7 +162,7 @@ MESSAGES: dict[str, str] = {
     "language_updated": "Til muvaffaqiyatli o‘zgartirildi.",
     # Commands
     "help_text": (
-        "🏢 UyAI — Ko‘chmas mulk aqlli Telegram platformasi.\n\n"
+        "🏢 UyIQ — Ko‘chmas mulk aqlli Telegram platformasi.\n\n"
         "Bu tizim orqali uylarni sotib olish, sotish, ijaraga berish va bozor narxini "
         "AI orqali baholash imkoniyati yaratiladi.\n\n"
         "Hozirda platforma asosiy poydevor va ro‘yxatga olish bosqichida ishlamoqda. "
@@ -331,8 +331,8 @@ MESSAGES: dict[str, str] = {
     ),
     # Phase 8: Property Valuation
     "val_welcome": (
-        "📊 <b>UyAI — Bozor baholash xizmati</b>\n\n"
-        "Ushbu xizmat UyAI bazasidagi tasdiqlangan e'lonlar va sun'iy intellekt tahlili "
+        "📊 <b>UyIQ — Bozor baholash xizmati</b>\n\n"
+        "Ushbu xizmat UyIQ bazasidagi tasdiqlangan e'lonlar va sun'iy intellekt tahlili "
         "asosida mulkingizning <b>taxminiy bozor bahosini</b> aniqlab beradi.\n\n"
         "⚠️ <i>Eslatma: Bu rasmiy ekspertiza, bank yoki kadastr baholashi emas, "
         "balki joriy bozor e'lonlariga asoslangan ko‘rsatkichdir.</i>\n\n"

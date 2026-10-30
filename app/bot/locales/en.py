@@ -8,7 +8,7 @@ MESSAGES: dict[str, str] = {
     "btn_en": "🇺🇸 English",
     # Consent
     "consent_text": (
-        "While using the UyAI service, your Telegram profile and contact details provided "
+        "While using the UyIQ service, your Telegram profile and contact details provided "
         "by you will be processed for service delivery purposes.\n\n"
         "By continuing, you agree to these terms."
     ),
@@ -32,8 +32,8 @@ MESSAGES: dict[str, str] = {
     ),
     # Registration & Welcome
     "registration_complete": "Congratulations! Registration successfully completed.",
-    "welcome_back": "🏢 Welcome back to UyAI!",
-    "main_menu_title": "🏢 UyAI — Main Menu\nSelect one of the services below:",
+    "welcome_back": "🏢 Welcome back to UyIQ!",
+    "main_menu_title": "🏢 UyIQ — Main Menu\nSelect one of the services below:",
     # Main Menu Buttons
     "btn_buy": "🏠 Buy property",
     "btn_rent": "🔑 Rent property",
@@ -157,7 +157,7 @@ MESSAGES: dict[str, str] = {
     "language_updated": "Language successfully updated.",
     # Commands
     "help_text": (
-        "🏢 UyAI — Smart Real Estate Telegram Platform.\n\n"
+        "🏢 UyIQ — Smart Real Estate Telegram Platform.\n\n"
         "This platform helps you buy, sell, rent properties and estimate market values "
         "using artificial intelligence.\n\n"
         "Commands:\n"
@@ -323,9 +323,9 @@ MESSAGES: dict[str, str] = {
     ),
     # Phase 8: Property Valuation
     "val_welcome": (
-        "📊 <b>UyAI — Market Valuation Service</b>\n\n"
+        "📊 <b>UyIQ — Market Valuation Service</b>\n\n"
         "This service calculates an <b>estimated market value</b> of your property based on "
-        "verified listings in the UyAI database and AI analysis.\n\n"
+        "verified listings in the UyIQ database and AI analysis.\n\n"
         "⚠️ <i>Note: This is not an official legal, bank, or cadastral appraisal, "
         "but an indicative metric based on current active market comps.</i>\n\n"
         "Select operation type to begin:"

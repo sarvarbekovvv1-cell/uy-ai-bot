@@ -68,7 +68,7 @@ async def test_help_command_handler() -> None:
         await handle_help_command(mock_message, mock_session)
 
     mock_message.answer.assert_awaited_once()
-    assert "UyAI" in mock_message.answer.call_args[0][0]
+    assert "UyIQ" in mock_message.answer.call_args[0][0]
 
 
 @pytest.mark.asyncio
