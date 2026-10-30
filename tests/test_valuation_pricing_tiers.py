@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from aiogram import Bot
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -498,3 +499,96 @@ async def test_back_button_from_package_restores_valuation_result_card(
     assert await fsm_context.get_state() == PropertyValuationStates.viewing_result
     call_text = callback_msg.edit_text.call_args[0][0]
     assert "Taxminiy bozor bahosi" in call_text
+
+
+@pytest.mark.asyncio
+async def test_upgrade_ai_callback_without_prior_input_shows_tiers_gracefully(
+    fsm_context: FSMContext,
+    db_session: AsyncSession,
+    sample_user: User,
+) -> None:
+    """Clicking upgrade_ai when state has no val_input still displays all 3 tiers and prices."""
+    await fsm_context.clear()
+
+    callback_msg = AsyncMock(spec=Message)
+    callback_msg.edit_text = AsyncMock()
+
+    tg_user = TgUser(id=sample_user.telegram_id, is_bot=False, first_name="Test")
+    callback = MagicMock(spec=CallbackQuery)
+    callback.data = "val_act:upgrade_ai"
+    callback.from_user = tg_user
+    callback.message = callback_msg
+    callback.answer = AsyncMock()
+
+    await handle_valuation_upgrade_ai(callback, fsm_context, db_session)
+
+    assert callback_msg.edit_text.called
+    call_text = callback_msg.edit_text.call_args[0][0]
+    assert "Basic (Bazaviy)" in call_text
+    assert "Standard (Standart)" in call_text
+    assert "Premium (Ekspert)" in call_text
+    assert "50 000 so‘m" in call_text
+    assert "65 000 so‘m" in call_text
+    assert "90 000 so‘m" in call_text
+
+
+@pytest.mark.asyncio
+async def test_upgrade_ai_callback_with_expired_answer_does_not_crash(
+    fsm_context: FSMContext,
+    db_session: AsyncSession,
+    sample_user: User,
+) -> None:
+    """If callback.answer() fails due to timeout/duplicate, handler still delivers the tiers."""
+    await fsm_context.clear()
+
+    callback_msg = AsyncMock(spec=Message)
+    callback_msg.edit_text = AsyncMock()
+
+    tg_user = TgUser(id=sample_user.telegram_id, is_bot=False, first_name="Test")
+    callback = MagicMock(spec=CallbackQuery)
+    callback.data = "val_act:upgrade_ai"
+    callback.from_user = tg_user
+    callback.message = callback_msg
+    # Simulate expired query or network glitch on answer()
+    callback.answer = AsyncMock(
+        side_effect=TelegramBadRequest(method="answerCallbackQuery", message="query is too old")
+    )
+
+    await handle_valuation_upgrade_ai(callback, fsm_context, db_session)
+
+    assert callback_msg.edit_text.called
+    call_text = callback_msg.edit_text.call_args[0][0]
+    assert "50 000 so‘m" in call_text
+
+
+@pytest.mark.asyncio
+async def test_upgrade_ai_diagnostic_logs_emitted(
+    fsm_context: FSMContext,
+    db_session: AsyncSession,
+    sample_user: User,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Verify all 6 diagnostic log stages are emitted during handle_valuation_upgrade_ai."""
+    import logging
+    caplog.set_level(logging.INFO)
+
+    await fsm_context.clear()
+    callback_msg = AsyncMock(spec=Message)
+    callback_msg.edit_text = AsyncMock()
+
+    tg_user = TgUser(id=sample_user.telegram_id, is_bot=False, first_name="Test")
+    callback = MagicMock(spec=CallbackQuery)
+    callback.data = "val_act:upgrade_ai"
+    callback.from_user = tg_user
+    callback.message = callback_msg
+    callback.answer = AsyncMock()
+
+    await handle_valuation_upgrade_ai(callback, fsm_context, db_session)
+
+    log_records = caplog.text
+    assert "DIAG_UPGRADE_AI: Callback qabul qilindi" in log_records
+    assert "DIAG_UPGRADE_AI: Handler ishga tushdi: handle_valuation_upgrade_ai" in log_records
+    assert "DIAG_UPGRADE_AI: Tariflar muvaffaqiyatli olindimi: HA" in log_records
+    assert "DIAG_UPGRADE_AI: Keyboard yaratildimi: HA" in log_records
+    assert "DIAG_UPGRADE_AI: Xatolik yuz berdimi: YO‘Q" in log_records
+

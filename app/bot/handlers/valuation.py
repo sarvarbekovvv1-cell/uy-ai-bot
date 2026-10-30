@@ -1,5 +1,6 @@
 """Telegram bot handlers for AI property market valuation."""
 
+import inspect
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -740,9 +741,7 @@ async def handle_valuation_currency(
             await callback.message.answer(card_text, reply_markup=markup)
 
 
-@valuation_router.callback_query(
-    PropertyValuationStates.waiting_package, F.data.startswith("val_pkg:")
-)
+@valuation_router.callback_query(F.data.startswith("val_pkg:"))
 async def handle_valuation_package_selection(
     callback: CallbackQuery,
     state: FSMContext,
@@ -1549,118 +1548,221 @@ async def handle_valuation_action_menu(
         )
 
 
-@valuation_router.callback_query(F.data == "val_act:upgrade_ai")
+@valuation_router.callback_query(
+    F.data.in_({
+        "val_act:upgrade_ai",
+        "val_act:upgrade",
+        "upgrade_ai",
+        "val_upgrade_ai",
+        "val_action:upgrade_ai",
+        "val_act:ai_upgrade",
+        "ai_upgrade",
+    })
+    | F.data.startswith("val_act:upgrade")
+    | F.data.startswith("upgrade_ai")
+)
 async def handle_valuation_upgrade_ai(
     callback: CallbackQuery,
     state: FSMContext,
     session: AsyncSession,
 ) -> None:
     """Transition from standard valuation result to paid AI valuation tiers."""
-    await callback.answer()
-    if not callback.from_user or not callback.message:
-        return
-
-    data = await state.get_data()
-    lang = data.get("language", "uz")
-    raw_input = data.get("val_input")
-
-    # If raw_input is missing, check if user has a recent property valuation in DB
-    if not raw_input:
-        order_repo = ValuationOrderRepository()
-        recent_order = await order_repo.get_latest_pending_for_user(session, callback.from_user.id)
-        if recent_order and recent_order.property_input:
-            raw_input = recent_order.property_input
-            await state.update_data(val_input=raw_input)
-
-    if not raw_input:
-        msg = (
-            "ℹ️ <b>Kengaytirilgan AI tahlili uchun avval mulk parametrlarini kiriting:</b>"
-            if lang == "uz"
-            else "ℹ️ <b>Для расширенного AI анализа сначала введите параметры недвижимости:</b>"
-        )
-        await state.update_data(
-            user_id=callback.from_user.id,
-            language=lang,
-            region="Toshkent shahri",
-            is_paid_flow=True,
-        )
-        await state.set_state(PropertyValuationStates.waiting_listing_type)
-        if isinstance(callback.message, Message):
-            await callback.message.answer(
-                msg,
-                reply_markup=get_valuation_listing_type_keyboard(lang=lang),
-            )
-        return
-
-    val_input = PropertyValuationInput.model_validate(raw_input)
-
-    card_repo = PaymentCardSettingRepository()
-    card_setting = await card_repo.get_setting(session)
-
-    # Always present packages to user
-    await state.set_state(PropertyValuationStates.waiting_package)
-
-    bsc_price_fmt = f"{int(card_setting.basic_price_uzs):,}".replace(",", " ")
-    std_price_fmt = f"{int(card_setting.standard_price_uzs):,}".replace(",", " ")
-    prem_price_fmt = f"{int(card_setting.premium_price_uzs):,}".replace(",", " ")
-    summary_text = format_valuation_input_summary(val_input, lang)
-
-    if lang == "ru":
-        pkg_text = (
-            f"{summary_text}\n"
-            "📊 <b>Выберите тариф расширенного AI анализа:</b>\n\n"
-            f"1️⃣ 🥉 <b>Basic (Базовый) — {bsc_price_fmt} сум</b>\n"
-            "• Базовый AI анализ недвижимости\n"
-            "• Ориентировочная рыночная стоимость\n"
-            "• Основной ценовой диапазон\n\n"
-            f"2️⃣ 🥈 <b>Standard (Стандарт) — {std_price_fmt} сум</b>\n"
-            "• Все возможности тарифа Basic\n"
-            "• Расширенный анализ рынка\n"
-            "• Факторы, влияющие на цену\n"
-            "• Более подробный отчет об оценке\n\n"
-            f"3️⃣ 🥇 <b>Premium (Премиум) — {prem_price_fmt} сум</b>\n"
-            "• Все возможности тарифа Standard\n"
-            "• Максимально детальный AI анализ\n"
-            "• Дополнительные рекомендации и инвестиционный анализ\n"
-            "• Полный экспертный отчет об оценке"
-        )
-    else:
-        pkg_text = (
-            f"{summary_text}\n"
-            "📊 <b>Kengaytirilgan AI baholash xizmati tarifini tanlang:</b>\n\n"
-            f"1️⃣ 🥉 <b>Basic (Bazaviy) — {bsc_price_fmt} so‘m</b>\n"
-            "• Asosiy AI ko‘chmas mulk tahlili\n"
-            "• Mulkning taxminiy bozor qiymati\n"
-            "• Asosiy narx diapazoni\n\n"
-            f"2️⃣ 🥈 <b>Standard (Standart) — {std_price_fmt} so‘m</b>\n"
-            "• Basic tarifidagi barcha imkoniyatlar\n"
-            "• Kengaytirilgan bozor tahlili\n"
-            "• Narxga ta'sir qiluvchi omillar\n"
-            "• Batafsilroq baholash hisoboti\n\n"
-            f"3️⃣ 🥇 <b>Premium (Ekspert) — {prem_price_fmt} so‘m</b>\n"
-            "• Standart tarifdagi barcha imkoniyatlar\n"
-            "• Eng batafsil AI tahlili\n"
-            "• Qo‘shimcha tavsiyalar va investitsion tahlil\n"
-            "• To‘liqroq baholash hisoboti"
-        )
-
-    markup = get_valuation_package_keyboard(
-        int(card_setting.basic_price_uzs),
-        int(card_setting.standard_price_uzs),
-        int(card_setting.premium_price_uzs),
-        lang=lang,
+    user_id = callback.from_user.id if callback.from_user else "unknown"
+    logger.info(
+        "DIAG_UPGRADE_AI: Callback qabul qilindi. user_id=%s, callback_data=%s",
+        user_id,
+        callback.data,
     )
+    logger.info("DIAG_UPGRADE_AI: Handler ishga tushdi: handle_valuation_upgrade_ai")
 
-    if isinstance(callback.message, Message):
+    # Safe answer to callback query (avoid unhandled errors if already answered or expired)
+    answered = False
+    try:
+        await callback.answer()
+        answered = True
+    except Exception as exc:
+        logger.warning(
+            "DIAG_UPGRADE_AI: callback.answer failed (may be expired or duplicate): %s", exc
+        )
+
+    try:
+        data = await state.get_data()
+        lang = data.get("language")
+        if not lang and callback.from_user:
+            user_svc = UserService()
+            db_user = await user_svc.get_by_telegram_id(session, callback.from_user.id)
+            if db_user:
+                lang = db_user.language
+        if not lang:
+            lang = "uz"
+
+        raw_input = data.get("val_input")
+
+        # If raw_input is missing, check if user has a recent property valuation in DB
+        if not raw_input and callback.from_user:
+            user_svc = UserService()
+            db_user = await user_svc.get_by_telegram_id(session, callback.from_user.id)
+            if db_user:
+                order_repo = ValuationOrderRepository()
+                recent_order = await order_repo.get_latest_pending_for_user(session, db_user.id)
+                if recent_order and recent_order.property_input:
+                    raw_input = recent_order.property_input
+                    await state.update_data(val_input=raw_input)
+
+        val_input: PropertyValuationInput | None = None
+        if raw_input:
+            try:
+                val_input = PropertyValuationInput.model_validate(raw_input)
+            except Exception as parse_err:
+                logger.warning("DIAG_UPGRADE_AI: Failed to validate raw_input: %s", parse_err)
+                val_input = None
+
+        card_repo = PaymentCardSettingRepository()
+        card_setting = await card_repo.get_setting(session)
+
+        basic_price = int(card_setting.basic_price_uzs)
+        std_price = int(card_setting.standard_price_uzs)
+        prem_price = int(card_setting.premium_price_uzs)
+
+        logger.info(
+            "DIAG_UPGRADE_AI: Tariflar muvaffaqiyatli olindimi: HA. Basic=%d, "
+            "Standard=%d, Premium=%d",
+            basic_price,
+            std_price,
+            prem_price,
+        )
+
+        await state.set_state(PropertyValuationStates.waiting_package)
+
+        bsc_price_fmt = f"{basic_price:,}".replace(",", " ")
+        std_price_fmt = f"{std_price:,}".replace(",", " ")
+        prem_price_fmt = f"{prem_price:,}".replace(",", " ")
+
+        summary_prefix = ""
+        if val_input:
+            summary_prefix = f"{format_valuation_input_summary(val_input, lang)}\n"
+
+        if lang == "ru":
+            pkg_text = (
+                f"{summary_prefix}"
+                "📊 <b>Выберите тариф расширенного AI анализа:</b>\n\n"
+                f"1️⃣ 🥉 <b>Basic (Базовый) — {bsc_price_fmt} сум</b>\n"
+                "• Базовый AI анализ недвижимости\n"
+                "• Ориентировочная рыночная стоимость\n"
+                "• Основной ценовой диапазон\n\n"
+                f"2️⃣ 🥈 <b>Standard (Стандарт) — {std_price_fmt} сум</b>\n"
+                "• Все возможности тарифа Basic\n"
+                "• Расширенный анализ рынка\n"
+                "• Факторы, влияющие на цену\n"
+                "• Более подробный отчет об оценке\n\n"
+                f"3️⃣ 🥇 <b>Premium (Премиум) — {prem_price_fmt} сум</b>\n"
+                "• Все возможности тарифа Standard\n"
+                "• Максимально детальный AI анализ\n"
+                "• Дополнительные рекомендации и инвестиционный анализ\n"
+                "• Полный экспертный отчет об оценке"
+            )
+        else:
+            pkg_text = (
+                f"{summary_prefix}"
+                "📊 <b>Kengaytirilgan AI baholash xizmati tarifini tanlang:</b>\n\n"
+                f"1️⃣ 🥉 <b>Basic (Bazaviy) — {bsc_price_fmt} so‘m</b>\n"
+                "• Asosiy AI ko‘chmas mulk tahlili\n"
+                "• Mulkning taxminiy bozor qiymati\n"
+                "• Asosiy narx diapazoni\n\n"
+                f"2️⃣ 🥈 <b>Standard (Standart) — {std_price_fmt} so‘m</b>\n"
+                "• Basic tarifidagi barcha imkoniyatlar\n"
+                "• Kengaytirilgan bozor tahlili\n"
+                "• Narxga ta'sir qiluvchi omillar\n"
+                "• Batafsilroq baholash hisoboti\n\n"
+                f"3️⃣ 🥇 <b>Premium (Ekspert) — {prem_price_fmt} so‘m</b>\n"
+                "• Standart tarifdagi barcha imkoniyatlar\n"
+                "• Eng batafsil AI tahlili\n"
+                "• Qo‘shimcha tavsiyalar va investitsion tahlil\n"
+                "• To‘liqroq baholash hisoboti"
+            )
+
+        markup = get_valuation_package_keyboard(
+            basic_price,
+            std_price,
+            prem_price,
+            lang=lang,
+        )
+        logger.info(
+            "DIAG_UPGRADE_AI: Keyboard yaratildimi: HA. Tugmalar soni: %d",
+            sum(len(row) for row in markup.inline_keyboard),
+        )
+
+        sent = False
+        if callback.message and isinstance(callback.message, Message):
+            try:
+                await callback.message.edit_text(pkg_text, reply_markup=markup)
+                sent = True
+            except TelegramBadRequest as edit_err:
+                logger.warning(
+                    "DIAG_UPGRADE_AI: edit_text failed, sending new message: %s", edit_err
+                )
+            except Exception as edit_err:
+                logger.warning(
+                    "DIAG_UPGRADE_AI: edit_text unexpected error, fallback to send_message: %s",
+                    edit_err,
+                )
+
+        if not sent:
+            chat_id = None
+            msg_obj = callback.message
+            if msg_obj and hasattr(msg_obj, "chat") and getattr(msg_obj.chat, "id", None):
+                chat_id = msg_obj.chat.id
+            elif callback.from_user:
+                chat_id = callback.from_user.id
+
+            if chat_id is not None and getattr(callback, "bot", None):
+                await callback.bot.send_message(
+                    chat_id=chat_id,
+                    text=pkg_text,
+                    reply_markup=markup,
+                )
+
+        logger.info("DIAG_UPGRADE_AI: Xatolik yuz berdimi: YO‘Q. Xabar muvaffaqiyatli yetkazildi.")
+
+    except Exception as exc:
+        logger.exception("DIAG_UPGRADE_AI: Xatolik yuz berdimi: HA. Traceback: %s", exc)
+        if not answered:
+            try:
+                await callback.answer("⚠️ Texnik xatolik yuz berdi.", show_alert=True)
+            except Exception:
+                pass
+        fallback_msg = (
+            "⚠️ Kengaytirilgan AI tahlilini yuklashda texnik xatolik yuz berdi. "
+            "Iltimos, qaytadan urinib ko‘ring yoki administratorga murojaat qiling."
+            if (lang if "lang" in locals() else "uz") == "uz"
+            else
+            "⚠️ Произошла техническая ошибка при загрузке расширенного AI анализа. "
+            "Пожалуйста, повторите попытку или обратитесь к администратору."
+        )
         try:
-            await callback.message.edit_text(pkg_text, reply_markup=markup)
-        except TelegramBadRequest:
-            await callback.message.answer(pkg_text, reply_markup=markup)
+            msg_obj = callback.message
+            bot_obj = getattr(callback, "bot", None)
+            if (
+                msg_obj
+                and isinstance(msg_obj, Message)
+                and callable(getattr(msg_obj, "answer", None))
+            ):
+                res = msg_obj.answer(fallback_msg)
+                if inspect.isawaitable(res):
+                    await res
+            elif (
+                callback.from_user
+                and bot_obj
+                and callable(getattr(bot_obj, "send_message", None))
+            ):
+                res = bot_obj.send_message(chat_id=callback.from_user.id, text=fallback_msg)
+                if inspect.isawaitable(res):
+                    await res
+        except Exception as send_err:
+            logger.error("DIAG_UPGRADE_AI: Could not deliver fallback error message: %s", send_err)
 
 
-@valuation_router.callback_query(
-    PropertyValuationStates.waiting_package, F.data == "val_pkg_back"
-)
+@valuation_router.callback_query(F.data == "val_pkg_back")
 async def handle_valuation_package_back(
     callback: CallbackQuery,
     state: FSMContext,
