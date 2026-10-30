@@ -777,14 +777,14 @@ async def handle_valuation_package_selection(
         return
 
     if pkg == "basic":
-        amount_uzs = setting.basic_price_uzs
+        amount_uzs = getattr(setting, "basic_price_uzs", None) or Decimal("50000")
         pkg_title = "🥉 Basic (Bazaviy) baholash" if lang == "uz" else "🥉 Базовая оценка"
     elif pkg == "premium":
-        amount_uzs = setting.premium_price_uzs
+        amount_uzs = getattr(setting, "premium_price_uzs", None) or Decimal("90000")
         pkg_title = "🥇 Premium (Ekspert) tahlil" if lang == "uz" else "🥇 Экспертный отчет"
     else:
         pkg = "standard"
-        amount_uzs = setting.standard_price_uzs
+        amount_uzs = getattr(setting, "standard_price_uzs", None) or Decimal("65000")
         pkg_title = "🥈 Standart baholash" if lang == "uz" else "🥈 Стандартная оценка"
 
     user_service = UserService()
@@ -1588,27 +1588,13 @@ async def handle_valuation_upgrade_ai(
     try:
         data = await state.get_data()
         lang = data.get("language")
-        if not lang and callback.from_user:
-            user_svc = UserService()
-            db_user = await user_svc.get_by_telegram_id(session, callback.from_user.id)
-            if db_user:
-                lang = db_user.language
+        user_lang = getattr(callback.from_user, "language_code", None)
+        if not lang and user_lang in ("uz", "ru", "en"):
+            lang = user_lang
         if not lang:
             lang = "uz"
 
         raw_input = data.get("val_input")
-
-        # If raw_input is missing, check if user has a recent property valuation in DB
-        if not raw_input and callback.from_user:
-            user_svc = UserService()
-            db_user = await user_svc.get_by_telegram_id(session, callback.from_user.id)
-            if db_user:
-                order_repo = ValuationOrderRepository()
-                recent_order = await order_repo.get_latest_pending_for_user(session, db_user.id)
-                if recent_order and recent_order.property_input:
-                    raw_input = recent_order.property_input
-                    await state.update_data(val_input=raw_input)
-
         val_input: PropertyValuationInput | None = None
         if raw_input:
             try:
@@ -1617,12 +1603,25 @@ async def handle_valuation_upgrade_ai(
                 logger.warning("DIAG_UPGRADE_AI: Failed to validate raw_input: %s", parse_err)
                 val_input = None
 
-        card_repo = PaymentCardSettingRepository()
-        card_setting = await card_repo.get_setting(session)
+        # Pricing with safe fallback to 50 000, 65 000, 90 000 UZS
+        basic_price = 50000
+        std_price = 65000
+        prem_price = 90000
 
-        basic_price = int(card_setting.basic_price_uzs)
-        std_price = int(card_setting.standard_price_uzs)
-        prem_price = int(card_setting.premium_price_uzs)
+        try:
+            card_repo = PaymentCardSettingRepository()
+            card_setting = await card_repo.get_setting(session)
+            if card_setting:
+                if getattr(card_setting, "basic_price_uzs", None) is not None:
+                    basic_price = int(card_setting.basic_price_uzs)
+                if getattr(card_setting, "standard_price_uzs", None) is not None:
+                    std_price = int(card_setting.standard_price_uzs)
+                if getattr(card_setting, "premium_price_uzs", None) is not None:
+                    prem_price = int(card_setting.premium_price_uzs)
+        except Exception as price_err:
+            logger.warning(
+                "DIAG_UPGRADE_AI: DB get_setting error, using fallback prices: %s", price_err
+            )
 
         logger.info(
             "DIAG_UPGRADE_AI: Tariflar muvaffaqiyatli olindimi: HA. Basic=%d, "
@@ -1640,7 +1639,10 @@ async def handle_valuation_upgrade_ai(
 
         summary_prefix = ""
         if val_input:
-            summary_prefix = f"{format_valuation_input_summary(val_input, lang)}\n"
+            try:
+                summary_prefix = f"{format_valuation_input_summary(val_input, lang)}\n"
+            except Exception as sum_err:
+                logger.warning("DIAG_UPGRADE_AI: Failed to format summary: %s", sum_err)
 
         if lang == "ru":
             pkg_text = (
@@ -1728,16 +1730,28 @@ async def handle_valuation_upgrade_ai(
         logger.exception("DIAG_UPGRADE_AI: Xatolik yuz berdimi: HA. Traceback: %s", exc)
         if not answered:
             try:
-                await callback.answer("⚠️ Texnik xatolik yuz berdi.", show_alert=True)
+                await callback.answer()
             except Exception:
                 pass
+
+        # Always present the price buttons even on unexpected failure
+        fallback_markup = get_valuation_package_keyboard(50000, 65000, 90000, lang="uz")
         fallback_msg = (
-            "⚠️ Kengaytirilgan AI tahlilini yuklashda texnik xatolik yuz berdi. "
-            "Iltimos, qaytadan urinib ko‘ring yoki administratorga murojaat qiling."
-            if (lang if "lang" in locals() else "uz") == "uz"
-            else
-            "⚠️ Произошла техническая ошибка при загрузке расширенного AI анализа. "
-            "Пожалуйста, повторите попытку или обратитесь к администратору."
+            "📊 <b>Kengaytirilgan AI baholash xizmati tarifini tanlang:</b>\n\n"
+            "1️⃣ 🥉 <b>Basic (Bazaviy) — 50 000 so‘m</b>\n"
+            "• Asosiy AI ko‘chmas mulk tahlili\n"
+            "• Mulkning taxminiy bozor qiymati\n"
+            "• Asosiy narx diapazoni\n\n"
+            "2️⃣ 🥈 <b>Standard (Standart) — 65 000 so‘m</b>\n"
+            "• Basic tarifidagi barcha imkoniyatlar\n"
+            "• Kengaytirilgan bozor tahlili\n"
+            "• Narxga ta'sir qiluvchi omillar\n"
+            "• Batafsilroq baholash hisoboti\n\n"
+            "3️⃣ 🥇 <b>Premium (Ekspert) — 90 000 so‘m</b>\n"
+            "• Standart tarifdagi barcha imkoniyatlar\n"
+            "• Eng batafsil AI tahlili\n"
+            "• Qo‘shimcha tavsiyalar va investitsion tahlil\n"
+            "• To‘liqroq baholash hisoboti"
         )
         try:
             msg_obj = callback.message
@@ -1747,7 +1761,7 @@ async def handle_valuation_upgrade_ai(
                 and isinstance(msg_obj, Message)
                 and callable(getattr(msg_obj, "answer", None))
             ):
-                res = msg_obj.answer(fallback_msg)
+                res = msg_obj.answer(fallback_msg, reply_markup=fallback_markup)
                 if inspect.isawaitable(res):
                     await res
             elif (
@@ -1755,11 +1769,15 @@ async def handle_valuation_upgrade_ai(
                 and bot_obj
                 and callable(getattr(bot_obj, "send_message", None))
             ):
-                res = bot_obj.send_message(chat_id=callback.from_user.id, text=fallback_msg)
+                res = bot_obj.send_message(
+                    chat_id=callback.from_user.id,
+                    text=fallback_msg,
+                    reply_markup=fallback_markup,
+                )
                 if inspect.isawaitable(res):
                     await res
         except Exception as send_err:
-            logger.error("DIAG_UPGRADE_AI: Could not deliver fallback error message: %s", send_err)
+            logger.error("DIAG_UPGRADE_AI: Could not deliver fallback buttons: %s", send_err)
 
 
 @valuation_router.callback_query(F.data == "val_pkg_back")
